@@ -11,6 +11,7 @@ from copy import deepcopy
 from solution import Solution
 import numpy as np
 from os.path import isfile
+from random import sample
 
 class PublicationMatcher:
     def __init__ (self,  authorsList, publicationList ):
@@ -314,6 +315,129 @@ class PublicationMatcher:
                             self.pubGraph.remove_edge(author, op)
         
     
+    def branchAndBoundHeuristic(self, maxWeight, minimalPoints = 0, maxSolutionsNo = 20000, publications = [], maxPoints = []):
+        minimalPoints = int(round(minimalPoints*100))
+    
+        if not publications:
+            publications = self.getAllPublicationsFromMainGraph()
+            
+        maxPointsOfRest = maxPoints
+        
+        if not maxPoints :
+            maxPoints = self.maxPointsOfRestFromFlowTheory(publications, maxWeight)
+#        print(maxPoints)
+        print("Maksymalne punkty z teori przeplywu - obliczone")
+        print(maxPoints)
+        maxWeight = int(round(maxWeight*100))
+        
+        minSizePerWeight = int( maxSolutionsNo/maxWeight )
+        
+        queue = [ Solution() ]
+        pubLen = len(publications)
+        
+        progressFile = open("progress.log", 'w' )
+        progressFile.close()
+        
+        inpossibleBranches = 0
+        toHeavyBranches = 0
+        toCheapBranches = 0
+        
+        bestPointsForWeight = {}
+        
+        for n, publication in enumerate(publications):
+            
+            authors = list(self.pubGraph.neighbors(publication))
+            maxPointsOfRest = maxPoints[n]
+            newQueue = []
+            for solution in queue:
+                for author in authors:
+                    newSolution = deepcopy(solution)
+                    solutionPossible = newSolution.addConnection(self.authorsDict[ author], self.publicationDict[publication] )
+                
+                    if not solutionPossible:
+                        inpossibleBranches += 1
+                        continue
+##                    
+                    if newSolution.actualWeight > maxWeight:
+                        toHeavyBranches += 1
+                        continue
+    #                    
+                    if newSolution.actualPoints + maxPointsOfRest < minimalPoints:
+                        toCheapBranches += 1
+                        continue
+                    
+                    weight = newSolution.actualWeight
+                    if weight in bestPointsForWeight:
+                        if newSolution.actualPoints > bestPointsForWeight[weight]:
+                            bestPointsForWeight[weight] = newSolution.actualPoints
+                    else:
+                        bestPointsForWeight[weight] = newSolution.actualPoints
+                    
+                    
+                    newQueue.append(deepcopy(newSolution))
+                    
+                if solution.actualPoints + maxPointsOfRest >= minimalPoints:
+                    newQueue.append(deepcopy(solution))
+                else:
+                    toCheapBranches += 1
+                    
+                queue = newQueue
+                
+                if len(queue) > maxSolutionsNo:
+                    newQueue = []
+                    for solution in queue:
+                        weight = solution.actualWeight
+                        points = solution.actualPoints
+                        if bestPointsForWeight[weight] > 1.1 * points:
+                            newQueue.append(solution)
+                            
+                    queue = newQueue
+                            
+                if len(newQueue) > maxSolutionsNo:
+                    mass2solutions = {}
+                    for solution in newQueue:
+                        weight2dict = solution.actualWeight
+                        if not weight2dict in mass2solutions:
+                            mass2solutions[weight2dict] = [ solution ]
+                        else:
+                            mass2solutions[weight2dict].append(solution)
+                            
+                    newQueue = []
+                    for mass in mass2solutions:
+                        if len(mass2solutions[mass]) <= minSizePerWeight:
+                            newQueue += mass2solutions[mass]
+                        else:
+                            newQueue += sample( mass2solutions[mass], minSizePerWeight )
+                
+                    queue = newQueue
+            
+            
+            progressFile = open("progress.log", 'a' )
+            progressFile.write("#########################\n")
+            progressFile.write(str(float(n/pubLen)*100) +  " %  "+str(n)+"\n")
+            progressFile.write("in queue: " + str(len(queue))+"\n")
+            progressFile.write("impossible branches: "+ str(inpossibleBranches)+"\n")
+            progressFile.write("to heavy branches: "+ str(toHeavyBranches)+"\n")
+            progressFile.write("to cheap branches: "+ str(toCheapBranches)+"\n")
+            progressFile.close()
+            
+        if not queue:
+            print("nic nie znaleziono!")
+            return
+            
+        bestSolution = None
+        bestPoints = 0
+        lowestPoints = 10000
+#        print("wszystkie rozwiazania: ", len(queue))
+        for solution in queue:
+            if solution.actualPoints > bestPoints:
+                bestPoints = solution.actualPoints
+                bestSolution = solution
+            if solution.actualPoints < lowestPoints:
+                lowestPoints = solution.actualPoints
+                
+        return bestSolution
+    
     def branchAndBound(self, maxWeight, minimalPoints = 0, publications = [], maxPoints = []):
         minimalPoints = int(round(minimalPoints*100))
     
@@ -396,7 +520,7 @@ class PublicationMatcher:
                 lowestPoints = solution.actualPoints
                 
         return bestSolution
-    
+        
 def countIdenticalElements( vector2test, vectorKnown):
     count = 0
     for el in vectorKnown:

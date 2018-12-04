@@ -8,11 +8,11 @@ Created on Thu Nov 22 14:46:58 2018
 
 from IOtemp import readAuthors, readPublications
 from publicationMatcher import PublicationMatcher
-import networkx as nx
 
-def printSolution( solution ):
-    for p in solution.publication2authors:
-        print( p, solution.publication2authors[p])
+def printSolution( solution, pm ):
+    for pub in solution.publication2authors:
+            print("publikacja: ", pm.publicationDict[pub].title, pm.publicationDict[pub].year)
+            print("autor: ", solution.publication2authors[pub])
         
 def checkN(workersList):
     N = 0
@@ -26,20 +26,12 @@ publicationsList = readPublications("publikacje.xls", workersList)
 
 pm = PublicationMatcher(workersList, publicationsList)
 pm.printStatus()
-#pm.preprocessing()
+pm.preprocessing()
 pm.printStatus()
 
-pubs = pm.getSortedPublicationByPoints()
-flowG = pm.buildFlowGraph(pubs)
-maxFlow, flowDict = nx.maximum_flow(flowG, "s", "t")
-print(maxFlow)
-print(checkN(workersList))
-#for node1 in flowDict:
-#    for node2 in flowDict[node1]:
-#        if node1 == "t" or node2 == "t":
-#            print(node1, node2, flowDict[node1][node2])
-#solution = pm.branchAndBound(258, 7900, pubs)
-#if solution:
-#    printSolution(solution)
-#else:
-#    print("nic ni ma")
+solution = pm.branchAndBoundHeuristic(258, 7400, 25800 )
+
+if solution:
+    printSolution(solution)
+else:
+    print("Solution not found")
