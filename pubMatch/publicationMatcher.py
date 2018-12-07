@@ -372,6 +372,11 @@ class PublicationMatcher:
                             bestPointsForWeight[weight] = newSolution.actualPoints
                     else:
                         bestPointsForWeight[weight] = newSolution.actualPoints
+                        
+                    points = newSolution.actualPoints
+                    if len(queue) > 0.5*maxSolutionsNo:
+                        if bestPointsForWeight[weight] * 0.9 >  points:
+                            continue
                     
                     
                     newQueue.append(deepcopy(newSolution))
