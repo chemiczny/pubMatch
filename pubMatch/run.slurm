@@ -1,7 +1,7 @@
 #!/bin/env bash
 #SBATCH -N 1
 #SBATCH -n 1
-#SBATCH --time=20:00:00
+#SBATCH --time=72:00:00
 #SBATCH --mem-per-cpu=120GB
 ##### Nazwa kolejki
 #SBATCH -p plgrid

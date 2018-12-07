@@ -388,7 +388,7 @@ class PublicationMatcher:
                     for solution in queue:
                         weight = solution.actualWeight
                         points = solution.actualPoints
-                        if bestPointsForWeight[weight] > 1.1 * points:
+                        if bestPointsForWeight[weight] * 0.9 <  points:
                             newQueue.append(solution)
                             
                     queue = newQueue

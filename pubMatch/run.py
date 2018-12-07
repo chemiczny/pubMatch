@@ -29,7 +29,7 @@ pm.printStatus()
 pm.preprocessing()
 pm.printStatus()
 
-solution = pm.branchAndBoundHeuristic(258, 7400, 25800 )
+solution = pm.branchAndBoundHeuristic(258, 7400, 25000000 )
 
 if solution:
     printSolution(solution)
