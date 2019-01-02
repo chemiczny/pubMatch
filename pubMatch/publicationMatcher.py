@@ -188,7 +188,7 @@ class PublicationMatcher:
         
         return flowG
     
-    def maxPointsFromFlowTheory(self, publications, maxW):
+    def maxPointsFromFlowTheory(self, publications, maxW, returnDict =False):
         W = int(100*maxW)
         
         flowG = self.buildFlowGraph(publications)
@@ -201,6 +201,10 @@ class PublicationMatcher:
         flowG.nodes["t"]["demand"] = W
         
         flowCost, flowDict = nx.network_simplex(flowG)
+        if returnDict:
+            data = { "maxPoints" : -flowCost/100, "maxSlots" : maxFlow/100, "flowGraph" : flowG, "flowDict" : flowDict}
+            return data
+        
         return -flowCost
     
     def maxPointsIncludingSolution(self, solution, publications, maxW):
