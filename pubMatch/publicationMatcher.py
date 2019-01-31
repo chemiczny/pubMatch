@@ -9,142 +9,9 @@ import networkx as nx
 from copy import deepcopy
 #import numpy as np
 from solution import Solution
-import numpy as np
-from os.path import isfile
 from random import sample
 
 class PublicationMatcher:
-    def __init__ (self,  authorsList, publicationList ):
-        self.authorsList = authorsList
-        self.publicationList = publicationList
-        
-        self.publicationDict = pubsList2dict(publicationList)
-        self.authorsDict = authorsList2dict(authorsList)
-        
-        self.subGraphs = []
-        self.generatePublicationGraph()
-        
-    
-    def generatePublicationGraph(self):
-        self.pubGraph = nx.Graph()
-        
-        for p in self.publicationList:
-            pId = p.id
-            self.pubGraph.add_node(pId)
-            self.pubGraph.nodes[pId]["type"] = "publication"
-            for auth in p.authors:
-                self.pubGraph.add_edge( pId, auth.name )
-                self.pubGraph.nodes[auth.name]["type"] = "author"
-                
-    def generateSingleAuthor2PubDict(self):
-        uniqueAuthorPubs = {}
-        for node in self.pubGraph.nodes:
-            if self.pubGraph.nodes[node]["type"] == "publication":
-                authors = list( self.pubGraph.neighbors(node) )
-                if len(authors) == 1:
-                    author = authors[0]
-                    if not author in uniqueAuthorPubs:
-                        uniqueAuthorPubs[author] = [ node ]
-                    else:
-                        uniqueAuthorPubs[author].append(node)
-                        
-        return uniqueAuthorPubs
-                
-    def getWeightSum(self, pubsId):
-        pubSum = 0
-        for pubId in pubsId:
-            pubSum += self.publicationDict[pubId].size
-        
-        return pubSum
-
-
-    def divideGraph(self, clean= True):
-        
-        somethingWasFound = True
-        if clean:
-            self.subGraphs = []
-        
-        while somethingWasFound:
-            somethingWasFound = False
-            
-            for author in self.authorsList:
-                name = author.name
-                if name in self.pubGraph.nodes:
-                    pubs = list(self.pubGraph.neighbors(name))
-                    sumWeight = self.getWeightSum(pubs)
-                    if sumWeight <= author.slots:
-                        self.subGraphs.append( nx.Graph( self.pubGraph.subgraph( pubs + [ name ] ) ) )
-                        self.pubGraph.remove_nodes_from( pubs + [ name ]  )
-                        somethingWasFound = True
-                        break
-                
-    
-    def countPublicationsInMainGraph(self):
-        return len(self.getAllPublicationsFromMainGraph())
-    
-    def getAllPublicationsFromMainGraph(self):
-        pubs = []
-        for node in self.pubGraph.nodes:
-            if self.pubGraph.nodes[node]["type"] == "publication":
-                pubs.append(node)
-                
-        return pubs
-
-    
-    def removeIsolatedNodes(self):
-        self.pubGraph.remove_nodes_from(list(nx.isolates(self.pubGraph)))
-        
-    def mergeSubgraphs(self):
-        for subg in self.subGraphs:
-            self.pubGraph = nx.compose(self.pubGraph, subg)
-            
-        self.subGrahs = []
-    
-    def printStatus(self):
-        print("Nodes: ", len(self.pubGraph.nodes))
-        print("Edges: ", len(self.pubGraph.edges))
-    
-    def preprocessing(self):
-        self.divideGraph()
-        self.mergeSubgraphs()
-        self.removeUnnecessaryPublications()
-        self.divideGraph()
-        self.mergeSubgraphs()
-        self.removeIsolatedNodes()
-        
-    def countMaxPublicationPoints(self, publications):
-        points = 0
-        for pub in publications:
-            points += self.publicationDict[pub].points
-            
-        return points
-    
-    def countMaxPublicationWeight(self, publications):
-        points = 0
-        for pub in publications:
-            points += self.publicationDict[pub].size
-            
-        return points
-    
-    def generateAuthor2Publications(self):
-        publications = self.getAllPublicationsFromMainGraph()
-        
-        authors2publications = {}
-        
-        for pub in publications:
-            authors = self.pubGraph.neighbors(pub)
-            for author in authors:
-                if author in authors2publications:
-                    authors2publications[author].append(pub)
-                else:
-                    authors2publications[author] = [ pub ]
-                    
-        author2publicationsNum = {}
-        
-        for author in authors2publications:
-            author2publicationsNum[author] = len(authors2publications[author])
-            
-        return authors2publications, author2publicationsNum
     
     def primitiveMaxPointsOfRest(self, publications):
         allPointsOfRest = self.countMaxPublicationPoints(publications)
@@ -197,12 +64,13 @@ class PublicationMatcher:
         if maxFlow < W:
             W = maxFlow
         
+        
         flowG.nodes["s"]["demand"] = -W
         flowG.nodes["t"]["demand"] = W
         
         flowCost, flowDict = nx.network_simplex(flowG)
         if returnDict:
-            data = { "maxPoints" : -flowCost/100, "maxSlots" : maxFlow/100, "flowGraph" : flowG, "flowDict" : flowDict}
+            data = { "maxPoints" : -flowCost/100, "maxSlots" : W/100, "flowGraph" : flowG, "flowDict" : flowDict}
             return data
         
         return -flowCost
@@ -271,52 +139,6 @@ class PublicationMatcher:
                 outList.append(p.id)
                 
         return outList
-            
-    def removeUnnecessaryPublications(self):
-        """Jesli autor ma kilka publikacji o identycznej masie, ktorych laczna masa przekracza jego ilosc slotow to zostaw najcenniejsze """
-        uniqueAuthor2Pubs = self.generateSingleAuthor2PubDict()
-        
-        for author in uniqueAuthor2Pubs:
-            pubs = uniqueAuthor2Pubs[author]
-    #        print(author, workersDict[author].slots)
-            weight2pubs = {}
-            for pubId in pubs:
-                newWeight = self.publicationDict[pubId].size
-                if not newWeight in weight2pubs:
-                    weight2pubs[newWeight] = [ pubId ]
-                else:
-                    weight2pubs[newWeight].append(pubId)
-                    
-            for weight in weight2pubs:
-                weightFloat = float(weight)
-                pubsNo = len(weight2pubs[weight])
-                
-                if weightFloat*pubsNo > self.authorsDict[author].slots:
-                    n = ( weightFloat*pubsNo -self.authorsDict[author].slots ) / weightFloat
-                    n = int(n)
-                    print("cos do usuniecia", author, n, pubsNo, weight,self.authorsDict[author].slots)
-                    
-                    interestingPubs = [ self.publicationDict[pubId] for pubId in weight2pubs[weight] ]
-                    interestingPubs = sorted( interestingPubs, key=lambda x: x.points)
-                    
-                    pointReference = interestingPubs[n+1].points
-                    print("najgorsza z najlepszych", pointReference)
-                    
-                    print([ip.points for ip in interestingPubs])
-                    interestingPubs = interestingPubs[ : int(n) ]
-                    
-                    for ip in interestingPubs:
-                        print("usuwam ", ip.points)
-                        self.pubGraph.remove_node(ip.id)
-                        
-                    
-                    otherPubs = self.pubGraph.neighbors( author )
-                    otherPubs = set(otherPubs) - set(pubs)
-                    
-                    for op in otherPubs :
-                        if self.publicationDict[ op].size == weight and self.publicationDict[ op].points <= pointReference:
-#                            print("usuwam krawedz",self.publicationDict[ op].size, self.publicationDict[ op].points )
-                            self.pubGraph.remove_edge(author, op)
         
     
     def branchAndBoundHeuristic(self, maxWeight, minimalPoints = 0, maxSolutionsNo = 20000, publications = [], maxPoints = []):
@@ -537,19 +359,4 @@ def countIdenticalElements( vector2test, vectorKnown):
             count +=1
             
     return count
-        
-    
-def pubsList2dict( pubsList):
-    pubDict = {}
-    
-    for pub in pubsList:
-        pubDict[pub.id] = pub
-        
-    return pubDict
 
-def authorsList2dict( authorsList ):
-    workersDict = {}
-    for  w in authorsList:
-        workersDict[w.name] = w
-        
-    return workersDict

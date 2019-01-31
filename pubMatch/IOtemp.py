@@ -63,7 +63,7 @@ def readAuthors(excelFile):
         name = workersSheet["Pracownik"][i].strip().upper()
         
         timeSum = 0
-        for year in [  2014, 2015, 2016, 2017 ]:
+        for year in [ 2013, 2014, 2015, 2016 ]:
             newTime = workersSheet[year][i]
             if isnan(newTime):
                 newTime = 0
