@@ -79,7 +79,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         bestPoints = 0
         
         for n, (publication, interactions) in enumerate(zip(publications, interactingAuthors)):
-            solutionClasses = []
+            solutionClasses = set()
             
             authors = list(self.pubGraph.neighbors(publication))
             maxPointsOfRest = maxPoints[n]
@@ -108,13 +108,10 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                     if newSolution.actualPoints > bestPoints:
                         bestPoints = newSolution.actualPoints
                         
-                    keyDict = { "weight" : newSolution.actualWeight , "points" : newSolution.actualPoints  }
-                    for a in interactions:
-                        if a in newSolution.authors2usedSlots:
-                            keyDict[a] = newSolution.authors2usedSlots[a]
+                    keySet = createSolutionKey(newSolution, interactions)
                     
-                    if not keyDict in solutionClasses:
-                        solutionClasses.append(keyDict)    
+                    if not keySet in solutionClasses:
+                        solutionClasses.add(keySet)    
                         newQueue.append(deepcopy(newSolution))
                     else:
                         isomorphicSolutions += 1
@@ -122,7 +119,13 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
 #                print(publication)
 #                print(interactions)
                 if solution.actualPoints + maxPointsOfRest >= minimalPoints:
-                    newQueue.append(deepcopy(solution))
+                    keySet = createSolutionKey(solution, interactions)
+                    
+                    if not keySet in solutionClasses:
+                        solutionClasses.add(keySet)
+                        newQueue.append(deepcopy(solution))
+                    else:
+                        isomorphicSolutions += 1
                 else:
                     toCheapBranches += 1
 #                break
@@ -157,3 +160,13 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                 
         self.saveSolution("solution.csv", bestSolution)
         return bestSolution
+    
+def createSolutionKey(newSolution, interactions):
+    keySet = str(newSolution.actualWeight)+"-"+str(newSolution.actualPoints)
+    for a in interactions:
+        if a in newSolution.authors2usedSlots:
+            keySet += "-"+ str(newSolution.authors2usedSlots[a])
+        else:
+            keySet += "-0"
+            
+    return keySet
