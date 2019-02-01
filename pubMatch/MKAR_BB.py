@@ -96,16 +96,16 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         
         heavySolutionsNo = 0
         
-        heavySolutions = []
+        heavySolution = Solution()
         
         bestPoints = 0
         
         for n, (publication, interactions, lightestWeight) in enumerate(zip(publications, interactingAuthors, lightestWeights)):
-            solutionClasses = set()
+            solutionClasses = {}
             
             authors = list(self.pubGraph.neighbors(publication))
             maxPointsOfRest = maxPoints[n]
-            newQueue = []
+            
             for solution in queue:
                 if solution.boundary < bestPoints:
                     continue
@@ -123,7 +123,8 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                         continue
                     
                     if newSolution.actualWeight + lightestWeight > maxWeight:
-                        heavySolutions.append(deepcopy(newSolution))
+                        if heavySolution.actualPoints < newSolution.actualPoints:
+                            heavySolution = deepcopy(newSolution)
                         heavySolutionsNo += 1
                         continue
         
@@ -139,11 +140,13 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                     keySet = createSolutionKey(newSolution, interactions)
 #                    
                     if not keySet in solutionClasses:
-                        solutionClasses.add(keySet)    
-                        newQueue.append(deepcopy(newSolution))
+                        solutionClasses[keySet] = deepcopy(newSolution)
                     else:
-                        isomorphicSolutions += 1
-                    newQueue.append(deepcopy(newSolution))
+                        if solutionClasses[keySet].actualPoints >= newSolution.actualPoints:
+                            isomorphicSolutions += 1
+                        else:
+                            solutionClasses[keySet] = deepcopy(newSolution)
+                    
                     
 #                print(publication)
 #                print(interactions)
@@ -155,14 +158,15 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                 keySet = createSolutionKey(solution, interactions)
                     
                 if not keySet in solutionClasses:
-                    solutionClasses.add(keySet)
-                    newQueue.append(deepcopy(solution))
+                        solutionClasses[keySet] = deepcopy(solution)
                 else:
-                    isomorphicSolutions += 1
-                newQueue.append(deepcopy(solution))
+                    if solutionClasses[keySet].actualPoints >= solution.actualPoints:
+                        isomorphicSolutions += 1
+                    else:
+                        solutionClasses[keySet] = deepcopy(solution)
 
                 
-            queue = newQueue
+            queue = list(solutionClasses.values())
             
             
             progressFile = open("progress.log", 'a' )
@@ -180,7 +184,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
             print("nic nie znaleziono!")
             return
         
-        queue += heavySolutions
+        queue.append( heavySolution )
             
         bestSolution = None
         bestPoints = 0
@@ -208,7 +212,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         return bestSolution
     
 def createSolutionKey(newSolution, interactions):
-    keySet = str(newSolution.actualWeight)+"-"+str(newSolution.actualPoints)
+    keySet = str(newSolution.actualWeight)
     for a in interactions:
         if a in newSolution.authors2usedSlots:
             keySet += "-"+ str(newSolution.authors2usedSlots[a])
