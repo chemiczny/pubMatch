@@ -19,17 +19,17 @@ workersList = readAuthors("../data/adamczykGroup.xls")
 #workersList = readAuthors("../data/pracownicy.xls")
 publicationsList = readPublications("../data/publikacje.xls", workersList)
 
-#mkar = MKAR_DynamicProgramming(workersList, publicationsList)
-mkar_flow = MKAR_BranchAndBound(workersList, publicationsList)
-mkar_flow.preprocessing()
-#mkar_flow.copyFromMKAR(mkar)
+mkar = MKAR_DynamicProgramming(workersList, publicationsList)
+mkar_flow = MKAR_BranchAndBound([], [])
+#mkar_flow.preprocessing()
+mkar_flow.copyFromMKAR(mkar)
 #print("Start")
-#print(mkar_flow.solveFlowProblem())
+print(mkar_flow.solveFlowProblem())
 #
-#while mkar.printStatus():
-#    mkar.preprocessing()
-#    mkar.useSimpleKnapsackSolution()
+while mkar.printStatus():
+    mkar.preprocessing()
+    mkar.useSimpleKnapsackSolution()
     
-#mkar_flow.copyFromMKAR(mkar)
+mkar_flow.copyFromMKAR(mkar)
 #mkar_flow.prepareForBB(True, True)
 mkar_flow.branchAndBound(3, 90)
