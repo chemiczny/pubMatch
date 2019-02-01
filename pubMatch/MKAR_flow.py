@@ -40,7 +40,7 @@ class MKAR_FlowTheory(MKAR):
             if maxFlow < maxW:
                 maxW = maxFlow
                 
-            for i in range(int(maxFlow)+1):
+            for i in range(int(maxW)+1):
                 subResult.append(self.solveFlowProblem(publicationSubset, float(i) ))
                 
             subResult.append(self.solveFlowProblem(publicationSubset, maxW ))
