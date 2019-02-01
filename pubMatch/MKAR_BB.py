@@ -16,7 +16,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
     def __init__(self,  authorsList, publicationList ):
         MKAR_FlowTheory.__init__(self, authorsList, publicationList)
         
-    def prepareForBB(self, componentsSizeDecreasing = False, authorsByPubNoDecreasing = False):
+    def prepareForBB(self, componentsSizeDecreasing = False, authorsByPubNoDecreasing = False, pubByDecrasingAuthors = False):
         self.divideGraph()
         self.components.sort( key = lambda item: len(item.nodes()) )
         
@@ -29,7 +29,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         
         authorsSum = set()
         for c in self.components:
-            print("##################################################")
+#            print("##################################################")
             authors = self.getAuthorsFromGraph(c)
             authors.sort(  key = lambda item: len( list( c.neighbors(item ) ) ) )
             
@@ -40,6 +40,9 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                 pubs = list(c.neighbors(a))
                 pubs.sort( key = lambda item: len( list( c.neighbors(item )) ) )
                 
+                if pubByDecrasingAuthors:
+                    pubs.reverse()
+                
                 for p in pubs:
                     if not p in publicationsForBB:
                         publicationsForBB.append(p)
@@ -47,7 +50,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                         authorsSum |= set(coauthors)
                         
                         interactingAuthors.append(list(authorsSum))
-                        print(len(authorsSum), authorsSum)
+#                        print(len(authorsSum), authorsSum)
                     
                 authorsSum.remove(a)
             
@@ -72,125 +75,48 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         
     def branchAndBound(self, maxWeight, minimalPoints = 0):
         timeStart = time()
+        self.minimalPoints = minimalPoints
         minimalPoints = int(round(minimalPoints*100))
 
-        publications, interactingAuthors, lightestWeights = self.prepareForBB(True, False)
+        publications, interactingAuthors, lightestWeights = self.prepareForBB(True, False, True)
             
         
-        maxPoints = self.maxPointsOfRestFromFlowTheory(publications, maxWeight)
-#        print(maxPoints)
+        self.maxPoints = self.maxPointsOfRestFromFlowTheory(publications, maxWeight)
         print("Maksymalne punkty z teori przeplywu - obliczone")
-        print(maxPoints)
-        maxWeight = int(round(maxWeight*100))
+        print(self.maxPoints)
+        self.maxWeight = int(round(maxWeight*100))
         
-        queue = [ Solution() ]
-        pubLen = len(publications)
+        self.queue = [ Solution() ]
+        self.pubLen = len(publications)
         
         progressFile = open("progress.log", 'w' )
         progressFile.close()
         
-        inpossibleBranches = 0
-        toHeavyBranches = 0
-        toCheapBranches = 0
-        isomorphicSolutions = 0
+        self.inpossibleBranches = 0
+        self.toHeavyBranches = 0
+        self.toCheapBranches = 0
+        self.isomorphicSolutions = 0
         
-        heavySolutionsNo = 0
+        self.heavySolutionsNo = 0
         
-        heavySolution = Solution()
+        self.heavySolution = Solution()
         
-        bestPoints = 0
+        self.bestPoints = 0
         
         for n, (publication, interactions, lightestWeight) in enumerate(zip(publications, interactingAuthors, lightestWeights)):
-            solutionClasses = {}
+            self.branchAndBoundIteration( n, publication, interactions, lightestWeight )
             
-            authors = list(self.pubGraph.neighbors(publication))
-            maxPointsOfRest = maxPoints[n]
-            
-            for solution in queue:
-                if solution.boundary < bestPoints:
-                    continue
-                
-                for author in authors:
-                    newSolution = deepcopy(solution)
-                    solutionPossible = newSolution.addConnection(self.authorsDict[ author], self.publicationDict[publication] )
-                
-                    if not solutionPossible:
-                        inpossibleBranches += 1
-                        continue
-##                    
-                    if newSolution.actualWeight > maxWeight:
-                        toHeavyBranches += 1
-                        continue
-                    
-                    if newSolution.actualWeight + lightestWeight > maxWeight:
-                        if heavySolution.actualPoints < newSolution.actualPoints:
-                            heavySolution = deepcopy(newSolution)
-                        heavySolutionsNo += 1
-                        continue
-        
-    
-                    newSolution.boundary = newSolution.actualPoints + maxPointsOfRest
-                    if newSolution.boundary < minimalPoints or newSolution.boundary < bestPoints:
-                        toCheapBranches += 1
-                        continue
-                    
-                    if newSolution.actualPoints > bestPoints:
-                        bestPoints = newSolution.actualPoints
-                        
-                    keySet = createSolutionKey(newSolution, interactions)
-#                    
-                    if not keySet in solutionClasses:
-                        solutionClasses[keySet] = deepcopy(newSolution)
-                    else:
-                        if solutionClasses[keySet].actualPoints >= newSolution.actualPoints:
-                            isomorphicSolutions += 1
-                        else:
-                            solutionClasses[keySet] = deepcopy(newSolution)
-                    
-                    
-#                print(publication)
-#                print(interactions)
-                solution.boundary = solution.actualPoints + maxPointsOfRest
-                if solution.boundary < minimalPoints or solution.boundary < bestPoints:
-                    toCheapBranches += 1
-                    continue
-                
-                keySet = createSolutionKey(solution, interactions)
-                    
-                if not keySet in solutionClasses:
-                        solutionClasses[keySet] = deepcopy(solution)
-                else:
-                    if solutionClasses[keySet].actualPoints >= solution.actualPoints:
-                        isomorphicSolutions += 1
-                    else:
-                        solutionClasses[keySet] = deepcopy(solution)
-
-                
-            queue = list(solutionClasses.values())
-            
-            
-            progressFile = open("progress.log", 'a' )
-            progressFile.write("#########################\n")
-            progressFile.write(str(float(n/pubLen)*100) +  " %  "+str(n)+"\n")
-            progressFile.write("in queue: " + str(len(queue))+"\n")
-            progressFile.write("impossible branches: "+ str(inpossibleBranches)+"\n")
-            progressFile.write("to heavy branches: "+ str(toHeavyBranches)+"\n")
-            progressFile.write("to cheap branches: "+ str(toCheapBranches)+"\n")
-            progressFile.write("isomorphic solutions: "+str(isomorphicSolutions)+"\n")
-            progressFile.write("heavy solutions: "+str(heavySolutionsNo)+"\n")
-            progressFile.close()
-            
-        if not queue:
+        if not self.queue:
             print("nic nie znaleziono!")
             return
         
-        queue.append( heavySolution )
+        self.queue.append( self.heavySolution )
             
         bestSolution = None
         bestPoints = 0
         lowestPoints = 10000
 #        print("wszystkie rozwiazania: ", len(queue))
-        for solution in queue:
+        for solution in self.queue:
             if solution.actualPoints > bestPoints:
                 bestPoints = solution.actualPoints
                 bestSolution = solution
@@ -211,6 +137,95 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         progressFile.close()
         return bestSolution
     
+    def branchAndBoundIteration(self, n, publication, interactions, lightestWeight ):
+        solutionClasses = {}
+            
+        authors = list(self.pubGraph.neighbors(publication))
+        maxPointsOfRest = self.maxPoints[n]
+        
+        for solution in self.queue:
+            if solution.boundary < self.bestPoints:
+                continue
+            
+            for author in authors:
+                newSolution = deepcopy(solution)
+                solutionPossible = newSolution.addConnection(self.authorsDict[ author], self.publicationDict[publication] )
+            
+                if not solutionPossible:
+                    self.inpossibleBranches += 1
+                    continue
+##                    
+                if newSolution.actualWeight > self.maxWeight:
+                    self.toHeavyBranches += 1
+                    continue
+                
+                if newSolution.actualWeight + lightestWeight > self.maxWeight:
+                    if self.heavySolution.actualPoints < newSolution.actualPoints:
+                        self.heavySolution = deepcopy(newSolution)
+                    self.heavySolutionsNo += 1
+                    continue
+    
+
+                newSolution.boundary = newSolution.actualPoints + maxPointsOfRest
+                if newSolution.boundary < self.minimalPoints or newSolution.boundary < self.bestPoints:
+                    self.toCheapBranches += 1
+                    continue
+                
+                if newSolution.actualPoints > self.bestPoints:
+                    self.bestPoints = newSolution.actualPoints
+                    
+                if not checkSolution(solutionClasses, newSolution, interactions):
+                    self.isomorphicSolutions+=1
+                    continue
+                
+                keySet = createSolutionKey(newSolution, interactions)
+                
+                if not keySet in solutionClasses:
+                    solutionClasses[keySet] = deepcopy(newSolution)
+                else:
+                    if solutionClasses[keySet].actualPoints >= newSolution.actualPoints:
+                        self.isomorphicSolutions += 1
+                    else:
+                        solutionClasses[keySet] = deepcopy(newSolution)
+
+                
+            solution.boundary = solution.actualPoints + maxPointsOfRest
+            if solution.boundary < self.minimalPoints or solution.boundary < self.bestPoints:
+                self.toCheapBranches += 1
+                continue
+            
+#            if not checkSolution(solutionClasses, solution, interactions):
+#                self.isomorphicSolutions+=1
+#                continue
+            
+            keySet = createSolutionKey(solution, interactions)
+                
+            if not keySet in solutionClasses:
+                solutionClasses[keySet] = deepcopy(solution)
+            else:
+                if solutionClasses[keySet].actualPoints >= solution.actualPoints:
+                    self.isomorphicSolutions += 1
+                else:
+                    solutionClasses[keySet] = deepcopy(solution)
+
+            
+        self.queue = list(solutionClasses.values())
+        self.writeProgress(n)
+        
+    def writeProgress(self, n):
+        progressFile = open("progress.log", 'a' )
+        progressFile.write("#########################\n")
+        progressFile.write(str(float(n/self.pubLen)*100) +  " %  "+str(n)+"\n")
+        progressFile.write("in queue: " + str(len(self.queue))+"\n")
+        progressFile.write("impossible branches: "+ str(self.inpossibleBranches)+"\n")
+        progressFile.write("to heavy branches: "+ str(self.toHeavyBranches)+"\n")
+        progressFile.write("to cheap branches: "+ str(self.toCheapBranches)+"\n")
+        progressFile.write("isomorphic solutions: "+str(self.isomorphicSolutions)+"\n")
+        progressFile.write("heavy solutions: "+str(self.heavySolutionsNo)+"\n")
+        progressFile.close()
+        
+        
+    
 def createSolutionKey(newSolution, interactions):
     keySet = str(newSolution.actualWeight)
     for a in interactions:
@@ -220,3 +235,42 @@ def createSolutionKey(newSolution, interactions):
             keySet += "-0"
             
     return keySet
+
+def checkSolution( solutionClasses, newSolution, interactions ):
+    oldSolution2remove = []
+    for solKey in solutionClasses:
+        if solutionClasses[solKey].actualWeight <= newSolution.actualWeight and solutionClasses[solKey].actualPoints >= newSolution.actualPoints:
+            need2removeNewSolution = solutionAWorseThanSolutionB(newSolution,  solutionClasses[solKey], interactions)
+            if need2removeNewSolution:
+                return False
+            
+        elif solutionClasses[solKey].actualWeight >= newSolution.actualWeight and solutionClasses[solKey].actualPoints <= newSolution.actualPoints:
+            need2removeOldSolution = solutionAWorseThanSolutionB(  solutionClasses[solKey],newSolution, interactions)
+            if need2removeOldSolution:
+                oldSolution2remove.append(solKey)
+               
+    for sol in oldSolution2remove:
+        del solutionClasses[sol]
+    
+    return True
+        
+def solutionAWorseThanSolutionB( solutionA, solutionB, interactions):
+#    if solutionA.actualPoints > solutionB.actualPoints :
+#        return False
+#    
+#    if solutionA.actualWeight < solutionB.actualWeight:
+#        return False
+    
+    for key in interactions:
+        if key in solutionA.authors2usedSlots and key in solutionB.authors2usedSlots:
+            if solutionA.authors2usedSlots[key] < solutionB.authors2usedSlots[key]:
+                return False
+        elif not key in solutionA.authors2usedSlots and not key in solutionB.authors2usedSlots:
+            continue
+        else:
+            return False
+        
+    return True
+        
+    
+    
