@@ -18,7 +18,8 @@ def checkN(workersList):
         
     return ceil(N/4.)*3
 
-workersList = readAuthors("data/pracownicy.xls")
+#workersList = readAuthors("data/pracownicy.xls")
+workersList = readAuthors("data/adamczykGroup.xls")
 publicationsList = readPublications("data/publikacje.xls", workersList)
 postFix = "All"
 

@@ -81,17 +81,25 @@ class MKAR_DynamicProgramming(MKAR):
         print("Solving KP for every author")
         uniqueAuthor2Pubs = self.generateSingleAuthor2PubDict()
         subgraphs = []
+        optimalGraphs = []
         
         for node in self.pubGraph.nodes:
             if self.pubGraph.nodes[node]["type"] == "author":
                 canUpdate, optimalSolution = self.solveKnapsackProblemForIsolatedNode(node, uniqueAuthor2Pubs)
+                optimalGraphs.append( [ node ] + list(optimalSolution))
                 if canUpdate:
                     subgraphs.append( [ node ] + list(optimalSolution))
-                
+
+        g = nx.Graph()
+        for sub in optimalGraphs :
+            g = nx.compose(g,nx.Graph(self.pubGraph.subgraph(sub)) )    
+            
         for sub in subgraphs:
             component = nx.Graph(self.pubGraph.subgraph(sub))
             self.pubGraph.remove_nodes_from(sub)
             self.pubGraph = nx.compose(self.pubGraph, component)
+            
+        return g    
                     
 def countIdenticalElements( vector2test, vectorKnown):
     count = 0

@@ -14,7 +14,8 @@ from IOtemp import readAuthors, readPublications
 from MKAR_dynamic import MKAR_DynamicProgramming
 from MKAR_flow import MKAR_FlowTheory
 from plotGraph import plotGraph
-    
+import matplotlib.pyplot as plt
+import networkx as nx
 #workersList = readAuthors("../data/adamczykGroup.xls")
 workersList = readAuthors("../data/pracownicy.xls")
 publicationsList = readPublications("../data/publikacje.xls", workersList)
@@ -25,16 +26,23 @@ mkar_flow.copyFromMKAR(mkar)
 print("Start")
 print(mkar_flow.solveFlowProblem())
 
-#plotGraph(mkar)
-print("pierwszy preprocessing")
-mkar.preprocessing()
-print("Dynamicznie:")
-mkar.useSimpleKnapsackSolution()
-print("Dynamiczne skonczone")
-mkar.preprocessing()
-#mkar.useSimpleKnapsackSolution()
-#mkar.preprocessing()
-#plotGraph(mkar)
+i = 0
+while mkar.printStatus() and i < 5:
+    mkar.preprocessing()
+    mkar.useSimpleKnapsackSolution()
+    i += 1
+    
 mkar_flow.copyFromMKAR(mkar)
 
 print(mkar_flow.solveFlowProblem())
+
+test = mkar.useSimpleKnapsackSolution()
+#plt.figure()
+#layout = nx.spring_layout(test)
+#nx.draw_networkx(test, layout)
+
+publicationsIds = mkar_flow.getAllPublicationsFromMainGraph()
+data = mkar_flow.maxPointsOfRestFromFlowTheory(publicationsIds, 230)
+
+plt.figure()
+plt.plot(data)

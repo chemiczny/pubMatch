@@ -26,7 +26,7 @@ class MKAR_FlowTheory(MKAR):
     def maxPointsOfRestFromFlowTheory(self, publications, maxW):
         result = []
         for i in range(len(publications)):
-            result.append( self.maxPointsFromFlowTheory( publications[i:], maxW ) )
+            result.append( self.solveFlowProblem( publications[i:], maxW ) )
             
         return result
         

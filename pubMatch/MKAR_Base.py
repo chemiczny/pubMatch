@@ -23,6 +23,8 @@ class MKAR:
         statusFile = open("status.log", 'w')
         statusFile.close()
         
+        self.lastStatus = None
+        
     def copyFromMKAR(self, mkar):
         self.authorsList = mkar.authorsList
         self.publicationList = mkar.publicationList
@@ -84,6 +86,14 @@ class MKAR:
                 
         return pubs
     
+    def getAuthorsFromGraph(self, g):
+        a = []
+        for node in g.nodes:
+            if self.pubGraph.nodes[node]["type"] == "author":
+                a.append(node)
+                
+        return a
+    
     def removeIsolatedNodes(self):
         print("################################")
         print("Searching for isolated nodes")
@@ -100,19 +110,24 @@ class MKAR:
         self.subGrahs = []
     
     def printStatus(self):
+        newStatus = {}
         print("################################")
         print("Graph Status")
         print("Nodes: ", len(self.pubGraph.nodes))
+        newStatus["nodes"] = len(self.pubGraph.nodes)
         print("Edges: ", len(self.pubGraph.edges))
+        newStatus["edges"] = len(self.pubGraph.edges)
         pubLen = len(self.getAllPublicationsFromMainGraph())
         print("Authors: ", len(self.pubGraph.nodes) - pubLen )
+        newStatus["authors"] = len(self.pubGraph.nodes) - pubLen
         print("Publications: ", pubLen)
+        newStatus["publications"] = pubLen
         
         self.divideGraph()
         print("Inedepndent components: ",len(self.components))
         compLen = [ len(c.nodes()) for c in self.components ]
         print(compLen)
-        
+        newStatus["components"] = len(self.components)
         statusFile = open("status.log", 'a')
         statusFile.write("################################\n")
         statusFile.write("Graph Status\n")
@@ -125,6 +140,25 @@ class MKAR:
         statusFile.write(str(compLen)+"\n")
         
         statusFile.close()
+        
+        if not self.lastStatus:
+            self.lastStatus = newStatus
+            return True
+        else:
+            result = newStatus != self.lastStatus
+#            print("co do kurwy? ", result, self.lastStatus, newStatus)
+            self.lastStatus = newStatus
+            return result
+        
+    def saveSolution(self, csvName, solution):
+        csv = open(csvName, 'w')
+        csv.write("title\tpoint\tsize\tauthor\tauthor used slots\t author slots available\n")
+        for pub in solution.publication2authors:
+            authorName = solution.publication2authors[pub]
+            csv.write(str(self.publicationDict[pub].title)+"\t"+str(self.publicationDict[pub].points)+"\t"+str(self.publicationDict[pub].size)+"\t")
+            csv.write(authorName+"\t"+str(solution.authors2usedSlots[authorName])+"\t"+str(self.authorsDict[authorName].slots)+"\n")
+        
+        csv.close()
     
     def preprocessing(self):
         self.printStatus()

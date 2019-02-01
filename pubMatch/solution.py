@@ -12,6 +12,7 @@ class Solution:
         self.authors2usedSlots = {}
         self.actualWeight = 0
         self.actualPoints = 0
+        self.boundary = 0
         
     def addConnection(self, author, publication):
         authorName = author.name
