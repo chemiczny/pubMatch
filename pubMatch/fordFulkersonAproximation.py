@@ -27,7 +27,7 @@ N = checkN(workersList)
 pm = MKAR_FlowTheory(workersList, publicationsList)
 pm.preprocessing()
 publicationsIds = pm.getAllPublicationsFromMainGraph()
-data = pm.solveFlowProblem(publicationsIds, N, True)
+data = pm.solveFlowProblem(publicationsIds, 33, True)
 
 maxPoinst = data["maxPoints"]
 maxSlots = data["maxSlots"]
@@ -124,5 +124,5 @@ writeUsedPublicationsLog(pm, flowDict, "usedPublications"+postFix+".csv")
 fractional = pm.extractFractionalGraph(flowDict)
 pm.pubGraph = fractional
 pm.printStatus()
-layout = nx.spring_layout(fractional)
-nx.draw_networkx(fractional, layout)
+#layout = nx.spring_layout(fractional)
+#nx.draw_networkx(fractional, layout)
