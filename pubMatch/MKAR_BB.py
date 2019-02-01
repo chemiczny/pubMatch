@@ -9,6 +9,8 @@ Created on Thu Jan 31 16:53:19 2019
 from MKAR_flow import MKAR_FlowTheory
 from solution import Solution
 from copy import deepcopy
+from time import time
+import datetime
 
 class MKAR_BranchAndBound(MKAR_FlowTheory):
     def __init__(self,  authorsList, publicationList ):
@@ -54,9 +56,10 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         return publicationsForBB, interactingAuthors
         
     def branchAndBound(self, maxWeight, minimalPoints = 0):
+        timeStart = time()
         minimalPoints = int(round(minimalPoints*100))
 
-        publications, interactingAuthors = self.prepareForBB(True, True)
+        publications, interactingAuthors = self.prepareForBB(True, False)
             
         
         maxPoints = self.maxPointsOfRestFromFlowTheory(publications, maxWeight)
@@ -109,26 +112,30 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                         bestPoints = newSolution.actualPoints
                         
                     keySet = createSolutionKey(newSolution, interactions)
-                    
+#                    
                     if not keySet in solutionClasses:
                         solutionClasses.add(keySet)    
                         newQueue.append(deepcopy(newSolution))
                     else:
                         isomorphicSolutions += 1
+                    newQueue.append(deepcopy(newSolution))
                     
 #                print(publication)
 #                print(interactions)
-                if solution.actualPoints + maxPointsOfRest >= minimalPoints:
-                    keySet = createSolutionKey(solution, interactions)
-                    
-                    if not keySet in solutionClasses:
-                        solutionClasses.add(keySet)
-                        newQueue.append(deepcopy(solution))
-                    else:
-                        isomorphicSolutions += 1
-                else:
+                solution.boundary = solution.actualPoints + maxPointsOfRest
+                if solution.boundary < minimalPoints or solution.boundary < bestPoints:
                     toCheapBranches += 1
-#                break
+                    continue
+                
+                keySet = createSolutionKey(solution, interactions)
+                    
+                if not keySet in solutionClasses:
+                    solutionClasses.add(keySet)
+                    newQueue.append(deepcopy(solution))
+                else:
+                    isomorphicSolutions += 1
+                newQueue.append(deepcopy(solution))
+
                 
             queue = newQueue
             
@@ -159,6 +166,17 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                 lowestPoints = solution.actualPoints
                 
         self.saveSolution("solution.csv", bestSolution)
+        
+        processingTime = time() - timeStart
+        prettyTimeTaken = str(datetime.timedelta(seconds = processingTime))
+        progressFile = open("progress.log", 'a' )
+        progressFile.write("#########################\n")
+        progressFile.write("##########FINISH#########\n")
+        progressFile.write("time taken: "+str(prettyTimeTaken)+"\n")
+        progressFile.write("Points: "+str(bestSolution.actualPoints)+"\n")
+        progressFile.write("Size: "+str(bestSolution.actualWeight)+"\n")
+        progressFile.write("#########################\n")
+        progressFile.close()
         return bestSolution
     
 def createSolutionKey(newSolution, interactions):
