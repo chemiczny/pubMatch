@@ -84,7 +84,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
 #        self.maxPoints = self.maxPointsOfRestFromFlowTheory(publications, maxWeight)
         self.maxPoints = self.maxPointsForBB(publications, maxWeight)
         print("Maksymalne punkty z teori przeplywu - obliczone")
-        print(self.maxPoints)
+#        print(self.maxPoints)
         self.maxWeight = int(round(maxWeight*100))
         
         self.queue = [ Solution() ]
@@ -145,9 +145,6 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
             return solution.actualPoints + maxPointsOfRest[index]
 
         return  solution.actualPoints + maxPointsOfRest[-1]    
-        
-            
-        
     
     def branchAndBoundIteration(self, n, publication, interactions, lightestWeight ):
         solutionClasses = {}
