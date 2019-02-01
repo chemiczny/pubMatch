@@ -25,6 +25,8 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         
         publicationsForBB = []
         interactingAuthors = []
+        lightestPublication = []
+        
         authorsSum = set()
         for c in self.components:
             print("##################################################")
@@ -49,17 +51,30 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                     
                 authorsSum.remove(a)
             
+        for pInd in range(len(publicationsForBB)):
+            pubs = publicationsForBB[pInd:]
+            
+            lightestWeight = 100
+            
+            for p in pubs:
+                newWeight = self.publicationDict[p].size
                 
+                if newWeight < lightestWeight:
+                    lightestWeight = newWeight
+                    
+            lightestPublication.append( lightestWeight )
+            
+        print(lightestPublication)
 #        for row in interactingAuthors:
 #            print(len(row), row)
             
-        return publicationsForBB, interactingAuthors
+        return publicationsForBB, interactingAuthors, lightestPublication
         
     def branchAndBound(self, maxWeight, minimalPoints = 0):
         timeStart = time()
         minimalPoints = int(round(minimalPoints*100))
 
-        publications, interactingAuthors = self.prepareForBB(True, False)
+        publications, interactingAuthors, lightestWeights = self.prepareForBB(True, False)
             
         
         maxPoints = self.maxPointsOfRestFromFlowTheory(publications, maxWeight)
@@ -79,9 +94,13 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         toCheapBranches = 0
         isomorphicSolutions = 0
         
+        heavySolutionsNo = 0
+        
+        heavySolutions = []
+        
         bestPoints = 0
         
-        for n, (publication, interactions) in enumerate(zip(publications, interactingAuthors)):
+        for n, (publication, interactions, lightestWeight) in enumerate(zip(publications, interactingAuthors, lightestWeights)):
             solutionClasses = set()
             
             authors = list(self.pubGraph.neighbors(publication))
@@ -102,7 +121,13 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                     if newSolution.actualWeight > maxWeight:
                         toHeavyBranches += 1
                         continue
-    #                    
+                    
+                    if newSolution.actualWeight + lightestWeight > maxWeight:
+                        heavySolutions.append(deepcopy(newSolution))
+                        heavySolutionsNo += 1
+                        continue
+        
+    
                     newSolution.boundary = newSolution.actualPoints + maxPointsOfRest
                     if newSolution.boundary < minimalPoints or newSolution.boundary < bestPoints:
                         toCheapBranches += 1
@@ -148,11 +173,14 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
             progressFile.write("to heavy branches: "+ str(toHeavyBranches)+"\n")
             progressFile.write("to cheap branches: "+ str(toCheapBranches)+"\n")
             progressFile.write("isomorphic solutions: "+str(isomorphicSolutions)+"\n")
+            progressFile.write("heavy solutions: "+str(heavySolutionsNo)+"\n")
             progressFile.close()
             
         if not queue:
             print("nic nie znaleziono!")
             return
+        
+        queue += heavySolutions
             
         bestSolution = None
         bestPoints = 0
