@@ -32,4 +32,4 @@ while mkar.printStatus():
     
 mkar_flow.copyFromMKAR(mkar)
 #mkar_flow.prepareForBB(True, True)
-mkar_flow.branchAndBound(3, 129)
+mkar_flow.branchAndBound(33, 1100)

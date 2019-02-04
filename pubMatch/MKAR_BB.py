@@ -38,7 +38,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                 
             for a in authors:
                 pubs = list(c.neighbors(a))
-                pubs.sort( key = lambda item: len( list( c.neighbors(item )) ) )
+                pubs.sort( key = lambda item: len(  set( c.neighbors(item )) - authorsSum  ) )
                 
                 if pubByDecrasingAuthors:
                     pubs.reverse()
@@ -78,7 +78,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         self.minimalPoints = minimalPoints
         minimalPoints = int(round(minimalPoints*100))
 
-        publications, interactingAuthors, lightestWeights = self.prepareForBB(True, False, True)
+        publications, interactingAuthors, lightestWeights = self.prepareForBB(False, False, False)
             
         
 #        self.maxPoints = self.maxPointsOfRestFromFlowTheory(publications, maxWeight)
@@ -158,6 +158,12 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
             if solution.boundary < self.bestPoints:
                 continue
             
+            if solution.actualWeight + lightestWeight > self.maxWeight:
+                    if self.heavySolution.actualPoints < solution.actualPoints:
+                        self.heavySolution = deepcopy(solution)
+                    self.heavySolutionsNo += 1
+                    continue
+            
             for author in authors:
                 newSolution = deepcopy(solution)
                 solutionPossible = newSolution.addConnection(self.authorsDict[ author], self.publicationDict[publication] )
@@ -185,13 +191,12 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                 
                 if newSolution.actualPoints > self.bestPoints:
                     self.bestPoints = newSolution.actualPoints
-                    
-#                if len(interactions) < 10:
+                
+                keySet, newSolution = createSolutionKey(newSolution, interactions)
+                
                 if not checkSolution(solutionClasses, newSolution, interactions):
                     self.isomorphicSolutions+=1
                     continue
-                
-                keySet = createSolutionKey(newSolution, interactions)
                 
                 if not keySet in solutionClasses:
                     solutionClasses[keySet] = deepcopy(newSolution)
@@ -211,7 +216,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
 #                self.isomorphicSolutions+=1
 #                continue
             
-            keySet = createSolutionKey(solution, interactions)
+            keySet, solution = createSolutionKey(solution, interactions)
                 
             if not keySet in solutionClasses:
                 solutionClasses[keySet] = deepcopy(solution)
@@ -223,9 +228,9 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
 
             
         self.queue = list(solutionClasses.values())
-        self.writeProgress(n)
+        self.writeProgress(n, len(interactions))
         
-    def writeProgress(self, n):
+    def writeProgress(self, n, interactionsSize):
         progressFile = open("progress.log", 'a' )
         progressFile.write("#########################\n")
         progressFile.write(str(float(n/self.pubLen)*100) +  " %  "+str(n)+"\n")
@@ -235,24 +240,28 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         progressFile.write("to cheap branches: "+ str(self.toCheapBranches)+"\n")
         progressFile.write("isomorphic solutions: "+str(self.isomorphicSolutions)+"\n")
         progressFile.write("heavy solutions: "+str(self.heavySolutionsNo)+"\n")
+        progressFile.write("authors-interactions: "+str(interactionsSize)+"\n")
         progressFile.close()
         
         
     
 def createSolutionKey(newSolution, interactions):
     keySet = str(newSolution.actualWeight)
+    newSolution.interactions = {}
 #    weights = {}
     for a in interactions:
         if a in newSolution.authors2usedSlots:
             usedSlots = newSolution.authors2usedSlots[a]
             keySet += "-"+ str(usedSlots)
+            newSolution.interactions[a] = usedSlots
 #            weights[a] = usedSlots
         else:
             keySet += "-0"
+            newSolution.interactions[a] = 0
 #            weights[a] = 0
             
 #    return keySet, weights
-    return keySet
+    return keySet, newSolution
 
 def checkSolution( solutionClasses, newSolution, interactions ):
     oldSolution2remove = []
@@ -279,14 +288,10 @@ def solutionAWorseThanSolutionB( solutionA, solutionB, interactions):
 #    if solutionA.actualWeight < solutionB.actualWeight:
 #        return False
     
-    for key in interactions:
-        if key in solutionA.authors2usedSlots and key in solutionB.authors2usedSlots:
-            if solutionA.authors2usedSlots[key] < solutionB.authors2usedSlots[key]:
-                return False
-        elif not key in solutionA.authors2usedSlots and not key in solutionB.authors2usedSlots:
-            continue
-        else:
+    for key in solutionA.interactions:
+        if solutionA.interactions[key] < solutionB.interactions[key]:
             return False
+
         
     return True
         

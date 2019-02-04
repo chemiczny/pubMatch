@@ -10,6 +10,7 @@ class Solution:
     def __init__(self):
         self.publication2authors = {}
         self.authors2usedSlots = {}
+        self.interactions = {}
         self.actualWeight = 0
         self.actualPoints = 0
         self.boundary = 0
