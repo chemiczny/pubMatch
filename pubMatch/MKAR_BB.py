@@ -151,6 +151,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
 #        interaction2weight = {}
 #        interaction2
         
+        timeStart = time()
         authors = list(self.pubGraph.neighbors(publication))
         maxPointsOfRest = self.maxPoints[n]
         
@@ -163,6 +164,12 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                         self.heavySolution = deepcopy(solution)
                     self.heavySolutionsNo += 1
                     continue
+                
+            keySet, solution = createSolutionKey(solution, interactions)
+                
+            if not checkSolution(solutionClasses, solution, interactions):
+                self.isomorphicSolutions+=1
+                continue
             
             for author in authors:
                 newSolution = deepcopy(solution)
@@ -179,6 +186,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                 if newSolution.actualWeight + lightestWeight > self.maxWeight:
                     if self.heavySolution.actualPoints < newSolution.actualPoints:
                         self.heavySolution = deepcopy(newSolution)
+#                        self.heavySolution = newSolution
                     self.heavySolutionsNo += 1
                     continue
     
@@ -205,6 +213,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                         self.isomorphicSolutions += 1
                     else:
                         solutionClasses[keySet] = deepcopy(newSolution)
+#                        solutionClasses[keySet] = newSolution
 
                 
             solution.boundary = self.findBoundaryForSolution( solution, maxPointsOfRest)
@@ -228,9 +237,10 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
 
             
         self.queue = list(solutionClasses.values())
-        self.writeProgress(n, len(interactions))
+        iterationTime = datetime.timedelta(seconds = time() - timeStart)
+        self.writeProgress(n, len(interactions), iterationTime)
         
-    def writeProgress(self, n, interactionsSize):
+    def writeProgress(self, n, interactionsSize, iterationTime):
         progressFile = open("progress.log", 'a' )
         progressFile.write("#########################\n")
         progressFile.write(str(float(n/self.pubLen)*100) +  " %  "+str(n)+"\n")
@@ -241,6 +251,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         progressFile.write("isomorphic solutions: "+str(self.isomorphicSolutions)+"\n")
         progressFile.write("heavy solutions: "+str(self.heavySolutionsNo)+"\n")
         progressFile.write("authors-interactions: "+str(interactionsSize)+"\n")
+        progressFile.write("iteration time: "+str(iterationTime)+"\n")
         progressFile.close()
         
         
