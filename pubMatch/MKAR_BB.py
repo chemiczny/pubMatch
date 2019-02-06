@@ -16,7 +16,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
     def __init__(self,  authorsList, publicationList ):
         MKAR_FlowTheory.__init__(self, authorsList, publicationList)
         
-    def prepareForBB(self, componentsSizeDecreasing = False, authorsByPubNoDecreasing = False, pubByDecrasingAuthors = False):
+    def prepareForBB(self, componentsSizeDecreasing = False, authorsByPubSorting = False, pubByDecrasingAuthors = False):
         self.divideGraph()
         self.components.sort( key = lambda item: len(item.nodes()) )
         
@@ -30,11 +30,11 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         authorsSum = set()
         for c in self.components:
 #            print("##################################################")
-            authors = self.getAuthorsFromGraph(c)
-            authors.sort(  key = lambda item: len( list( c.neighbors(item ) ) ) )
-            
-            if authorsByPubNoDecreasing:
-                authors.reverse()
+            if authorsByPubSorting:
+                authors = self.getAuthorsFromGraph(c)
+                authors.sort(  key = lambda item: len( list( c.neighbors(item ) ) ) )
+            else:
+                authors = self.sortAuthors(c)
                 
             for a in authors:
                 pubs = list(c.neighbors(a))
@@ -42,7 +42,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                 
                 if pubByDecrasingAuthors:
                     pubs.reverse()
-                
+                    
                 for p in pubs:
                     if not p in publicationsForBB:
                         publicationsForBB.append(p)
@@ -50,10 +50,17 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                         authorsSum |= set(coauthors)
                         
                         interactingAuthors.append(list(authorsSum))
-#                        print(len(authorsSum), authorsSum)
+                        
+                        pubsSet = set(publicationsForBB)
+                        a2remove = []
+                        for coa in authorsSum:
+                            if set(c.neighbors(coa)).issubset( pubsSet ):
+                                a2remove.append(coa)
+                        for a2r in a2remove:
+                            authorsSum.remove(a2r)
                     
-                authorsSum.remove(a)
             
+        print(len(publicationsForBB))
         for pInd in range(len(publicationsForBB)):
             pubs = publicationsForBB[pInd:]
             
@@ -67,11 +74,57 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                     
             lightestPublication.append( lightestWeight )
             
-        print(lightestPublication)
-#        for row in interactingAuthors:
-#            print(len(row), row)
+#        print(lightestPublication)
+        import matplotlib.pyplot as plt
+        inter = [ len(row) for row in interactingAuthors ]
+        plt.plot(inter)
             
         return publicationsForBB, interactingAuthors, lightestPublication
+    
+    def sortAuthors(self, component):
+        authors = self.getAuthorsFromGraph(component)
+        
+        author2coauthor = {}
+        authorRoot = None
+        lowestCoauthors = 666
+        
+        for a in authors:
+            coauthors = self.getCoauthors(component, a)
+                
+            author2coauthor[a] = coauthors
+            if len(coauthors) < lowestCoauthors:
+                lowestCoauthors = len(coauthors)
+                authorRoot = a
+                
+        sortedAuthors = [ authorRoot ]
+        authorsUsed = set(sortedAuthors)
+        interactions = author2coauthor[authorRoot] - authorsUsed
+        
+        while len(sortedAuthors) != len(authors):
+            nextAuthor = None
+            lowestDisturb = 666
+            
+            for a in interactions:
+                disturbLen = len(author2coauthor[a]-authorsUsed-interactions) 
+                if disturbLen < lowestDisturb:
+                    lowestDisturb = disturbLen
+                    nextAuthor = a
+                    
+            sortedAuthors.append(nextAuthor)
+            authorsUsed.add(nextAuthor)
+            interactions |= author2coauthor[nextAuthor]
+            interactions -= authorsUsed
+            
+        return sortedAuthors
+        
+    def getCoauthors(self, component, author):
+        coauthors = set()
+            
+        pubs = component.neighbors(author)
+        for p in pubs:
+            coauthors |= set(component.neighbors(p))
+            
+        return coauthors
         
     def branchAndBound(self, maxWeight, minimalPoints = 0):
         timeStart = time()
@@ -106,12 +159,12 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         
         for n, (publication, interactions, lightestWeight) in enumerate(zip(publications, interactingAuthors, lightestWeights)):
             self.branchAndBoundIteration( n, publication, interactions, lightestWeight )
-            
+        
+        self.queue.append( self.heavySolution )
+        
         if not self.queue:
             print("nic nie znaleziono!")
             return
-        
-        self.queue.append( self.heavySolution )
             
         bestSolution = None
         bestPoints = 0
@@ -235,12 +288,13 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                 else:
                     solutionClasses[keySet] = deepcopy(solution)
 
-            
+#        if len(interactions) == 1 :
+#            print(list(solutionClasses.keys())[:10])
         self.queue = list(solutionClasses.values())
         iterationTime = datetime.timedelta(seconds = time() - timeStart)
-        self.writeProgress(n, len(interactions), iterationTime)
+        self.writeProgress(n, interactions, iterationTime)
         
-    def writeProgress(self, n, interactionsSize, iterationTime):
+    def writeProgress(self, n, interactions, iterationTime):
         progressFile = open("progress.log", 'a' )
         progressFile.write("#########################\n")
         progressFile.write(str(float(n/self.pubLen)*100) +  " %  "+str(n)+"\n")
@@ -250,7 +304,8 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         progressFile.write("to cheap branches: "+ str(self.toCheapBranches)+"\n")
         progressFile.write("isomorphic solutions: "+str(self.isomorphicSolutions)+"\n")
         progressFile.write("heavy solutions: "+str(self.heavySolutionsNo)+"\n")
-        progressFile.write("authors-interactions: "+str(interactionsSize)+"\n")
+        progressFile.write("authors-interactions: "+str(len(interactions))+"\n")
+        progressFile.write(str(interactions)+"\n")
         progressFile.write("iteration time: "+str(iterationTime)+"\n")
         progressFile.close()
         
