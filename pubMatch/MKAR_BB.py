@@ -60,7 +60,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                             authorsSum.remove(a2r)
                     
             
-        print(len(publicationsForBB))
+#        print(len(publicationsForBB))
         for pInd in range(len(publicationsForBB)):
             pubs = publicationsForBB[pInd:]
             
@@ -75,10 +75,10 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
             lightestPublication.append( lightestWeight )
             
 #        print(lightestPublication)
-        import matplotlib.pyplot as plt
-        inter = [ len(row) for row in interactingAuthors ]
-        plt.plot(inter)
-            
+#        import matplotlib.pyplot as plt
+#        inter = [ len(row) for row in interactingAuthors ]
+#        plt.plot(inter)
+#            
         return publicationsForBB, interactingAuthors, lightestPublication
     
     def sortAuthors(self, component):
@@ -126,12 +126,12 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
             
         return coauthors
         
-    def branchAndBound(self, maxWeight, minimalPoints = 0):
+    def branchAndBound(self, maxWeight, minimalPoints = 0, p1 = False, p2 = False, p3 = False):
         timeStart = time()
         self.minimalPoints = minimalPoints
         minimalPoints = int(round(minimalPoints*100))
 
-        publications, interactingAuthors, lightestWeights = self.prepareForBB(False, False, False)
+        publications, interactingAuthors, lightestWeights = self.prepareForBB(p1, p2, p3)
             
         
 #        self.maxPoints = self.maxPointsOfRestFromFlowTheory(publications, maxWeight)
@@ -158,6 +158,8 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         self.bestPoints = 0
         
         for n, (publication, interactions, lightestWeight) in enumerate(zip(publications, interactingAuthors, lightestWeights)):
+            restOfPublication = set(publications[n : ])
+            self.calculateInteractionProperties(interactions, restOfPublication)
             self.branchAndBoundIteration( n, publication, interactions, lightestWeight )
         
         self.queue.append( self.heavySolution )
@@ -191,6 +193,29 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         progressFile.close()
         return bestSolution
     
+    def calculateInteractionProperties(self, interactions, restOfPublications):
+        self.interaction2slots = {}
+        self.interaction2restWeight = {}
+        self.interaction2lightestWeight = {}
+        
+        for author in interactions:
+            self.interaction2slots[author] = self.authorsDict[author].slots
+            
+            restOfHisPublication = restOfPublications & set(self.pubGraph.neighbors(author))
+            
+            restWeight = 0
+            lightestWeight = 100000
+            
+            for pub in restOfHisPublication:
+                newSize = self.publicationDict[pub].size
+                restWeight += newSize
+                
+                if newSize < lightestWeight:
+                    lightestWeight = newSize
+                    
+            self.interaction2restWeight[author] = restWeight
+            self.interaction2lightestWeight[author] = lightestWeight
+    
     def findBoundaryForSolution(self, solution, maxPointsOfRest):
         index = int((self.maxWeight - solution.actualWeight)/100.)+1
         
@@ -203,6 +228,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         solutionClasses = {}
 #        interaction2weight = {}
 #        interaction2
+        
         
         timeStart = time()
         authors = list(self.pubGraph.neighbors(publication))
@@ -218,7 +244,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                     self.heavySolutionsNo += 1
                     continue
                 
-            keySet, solution = createSolutionKey(solution, interactions)
+            keySet, solution = self.createSolutionKey(solution, interactions)
                 
             if not checkSolution(solutionClasses, solution, interactions):
                 self.isomorphicSolutions+=1
@@ -253,7 +279,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                 if newSolution.actualPoints > self.bestPoints:
                     self.bestPoints = newSolution.actualPoints
                 
-                keySet, newSolution = createSolutionKey(newSolution, interactions)
+                keySet, newSolution = self.createSolutionKey(newSolution, interactions)
                 
                 if not checkSolution(solutionClasses, newSolution, interactions):
                     self.isomorphicSolutions+=1
@@ -278,7 +304,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
 #                self.isomorphicSolutions+=1
 #                continue
             
-            keySet, solution = createSolutionKey(solution, interactions)
+            keySet, solution = self.createSolutionKey(solution, interactions)
                 
             if not keySet in solutionClasses:
                 solutionClasses[keySet] = deepcopy(solution)
@@ -311,33 +337,37 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         
         
     
-def createSolutionKey(newSolution, interactions):
-    keySet = str(newSolution.actualWeight)
-    newSolution.interactions = {}
-#    weights = {}
-    for a in interactions:
-        if a in newSolution.authors2usedSlots:
-            usedSlots = newSolution.authors2usedSlots[a]
-            keySet += "-"+ str(usedSlots)
-            newSolution.interactions[a] = usedSlots
-#            weights[a] = usedSlots
-        else:
-            keySet += "-0"
-            newSolution.interactions[a] = 0
-#            weights[a] = 0
-            
-#    return keySet, weights
-    return keySet, newSolution
+    def createSolutionKey(self, newSolution, interactions):
+        keySet = str(newSolution.actualWeight)
+        newSolution.interactions = {}
+    #    weights = {}
+        for a in interactions:
+            if a in newSolution.authors2usedSlots:
+                usedSlots = newSolution.authors2usedSlots[a]
+                if usedSlots + self.interaction2lightestWeight[a] > self.interaction2slots[a]:
+                    usedSlots = self.interaction2slots[a]
+                elif self.interaction2slots[a] - usedSlots > self.interaction2restWeight[a]:
+                    usedSlots = 0
+                keySet += "-"+ str(usedSlots)
+                newSolution.interactions[a] = usedSlots
+    #            weights[a] = usedSlots
+            else:
+                keySet += "-0"
+                newSolution.interactions[a] = 0
+    #            weights[a] = 0
+                
+    #    return keySet, weights
+        return keySet, newSolution
 
 def checkSolution( solutionClasses, newSolution, interactions ):
     oldSolution2remove = []
     for solKey in solutionClasses:
-        if solutionClasses[solKey].actualWeight <= newSolution.actualWeight and solutionClasses[solKey].actualPoints >= newSolution.actualPoints:
+        if solutionClasses[solKey].actualWeight <= newSolution.actualWeight and solutionClasses[solKey].actualPoints >= newSolution.actualPoints :
             need2removeNewSolution = solutionAWorseThanSolutionB(newSolution,  solutionClasses[solKey], interactions)
             if need2removeNewSolution:
                 return False
             
-        elif solutionClasses[solKey].actualWeight >= newSolution.actualWeight and solutionClasses[solKey].actualPoints <= newSolution.actualPoints:
+        elif solutionClasses[solKey].actualWeight >= newSolution.actualWeight and solutionClasses[solKey].actualPoints <= newSolution.actualPoints   :
             need2removeOldSolution = solutionAWorseThanSolutionB(  solutionClasses[solKey],newSolution, interactions)
             if need2removeOldSolution:
                 oldSolution2remove.append(solKey)
