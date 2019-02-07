@@ -49,8 +49,6 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                         coauthors = list(c.neighbors(p))
                         authorsSum |= set(coauthors)
                         
-                        interactingAuthors.append(list(authorsSum))
-                        
                         pubsSet = set(publicationsForBB)
                         a2remove = []
                         for coa in authorsSum:
@@ -58,6 +56,8 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                                 a2remove.append(coa)
                         for a2r in a2remove:
                             authorsSum.remove(a2r)
+                            
+                        interactingAuthors.append(list(authorsSum))
                     
             
 #        print(len(publicationsForBB))
@@ -133,11 +133,9 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
 
         publications, interactingAuthors, lightestWeights = self.prepareForBB(p1, p2, p3)
             
-        
-#        self.maxPoints = self.maxPointsOfRestFromFlowTheory(publications, maxWeight)
         self.maxPoints = self.maxPointsForBB(publications, maxWeight)
         print("Maksymalne punkty z teori przeplywu - obliczone")
-#        print(self.maxPoints)
+        
         self.maxWeight = int(round(maxWeight*100))
         
         self.queue = [ Solution() ]
@@ -158,7 +156,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         self.bestPoints = 0
         
         for n, (publication, interactions, lightestWeight) in enumerate(zip(publications, interactingAuthors, lightestWeights)):
-            restOfPublication = set(publications[n : ])
+            restOfPublication = set(publications[n+1 : ])
             self.calculateInteractionProperties(interactions, restOfPublication)
             self.branchAndBoundIteration( n, publication, interactions, lightestWeight )
         
@@ -198,7 +196,9 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         self.interaction2restWeight = {}
         self.interaction2lightestWeight = {}
         
+        print("kalkulacje")
         for author in interactions:
+            w = []
             self.interaction2slots[author] = self.authorsDict[author].slots
             
             restOfHisPublication = restOfPublications & set(self.pubGraph.neighbors(author))
@@ -209,12 +209,15 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
             for pub in restOfHisPublication:
                 newSize = self.publicationDict[pub].size
                 restWeight += newSize
-                
+                w.append(newSize)
                 if newSize < lightestWeight:
                     lightestWeight = newSize
                     
+            print(w)
             self.interaction2restWeight[author] = restWeight
             self.interaction2lightestWeight[author] = lightestWeight
+            
+        print("po kalkulacjach")
     
     def findBoundaryForSolution(self, solution, maxPointsOfRest):
         index = int((self.maxWeight - solution.actualWeight)/100.)+1
@@ -226,9 +229,6 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
     
     def branchAndBoundIteration(self, n, publication, interactions, lightestWeight ):
         solutionClasses = {}
-#        interaction2weight = {}
-#        interaction2
-        
         
         timeStart = time()
         authors = list(self.pubGraph.neighbors(publication))
@@ -236,18 +236,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         
         for solution in self.queue:
             if solution.boundary < self.bestPoints:
-                continue
-            
-            if solution.actualWeight + lightestWeight > self.maxWeight:
-                    if self.heavySolution.actualPoints < solution.actualPoints:
-                        self.heavySolution = deepcopy(solution)
-                    self.heavySolutionsNo += 1
-                    continue
-                
-            keySet, solution = self.createSolutionKey(solution, interactions)
-                
-            if not checkSolution(solutionClasses, solution, interactions):
-                self.isomorphicSolutions+=1
+                self.toCheapBranches += 1
                 continue
             
             for author in authors:
@@ -265,7 +254,6 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                 if newSolution.actualWeight + lightestWeight > self.maxWeight:
                     if self.heavySolution.actualPoints < newSolution.actualPoints:
                         self.heavySolution = deepcopy(newSolution)
-#                        self.heavySolution = newSolution
                     self.heavySolutionsNo += 1
                     continue
     
@@ -275,9 +263,6 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                 if newSolution.boundary < self.minimalPoints or newSolution.boundary < self.bestPoints:
                     self.toCheapBranches += 1
                     continue
-                
-                if newSolution.actualPoints > self.bestPoints:
-                    self.bestPoints = newSolution.actualPoints
                 
                 keySet, newSolution = self.createSolutionKey(newSolution, interactions)
                 
@@ -293,6 +278,9 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                     else:
                         solutionClasses[keySet] = deepcopy(newSolution)
 #                        solutionClasses[keySet] = newSolution
+                
+                if newSolution.actualPoints > self.bestPoints:
+                    self.bestPoints = newSolution.actualPoints
 
                 
             solution.boundary = self.findBoundaryForSolution( solution, maxPointsOfRest)
@@ -300,12 +288,18 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                 self.toCheapBranches += 1
                 continue
             
-#            if not checkSolution(solutionClasses, solution, interactions):
-#                self.isomorphicSolutions+=1
-#                continue
-            
+            if solution.actualWeight + lightestWeight > self.maxWeight:
+                    if self.heavySolution.actualPoints < solution.actualPoints:
+                        self.heavySolution = deepcopy(solution)
+                    self.heavySolutionsNo += 1
+                    continue
+                
             keySet, solution = self.createSolutionKey(solution, interactions)
                 
+            if not checkSolution(solutionClasses, solution, interactions):
+                self.isomorphicSolutions+=1
+                continue
+        
             if not keySet in solutionClasses:
                 solutionClasses[keySet] = deepcopy(solution)
             else:
@@ -344,9 +338,11 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         for a in interactions:
             if a in newSolution.authors2usedSlots:
                 usedSlots = newSolution.authors2usedSlots[a]
-                if usedSlots + self.interaction2lightestWeight[a] > self.interaction2slots[a]:
+                slotsLeft = self.interaction2slots[a] - usedSlots
+                
+                if slotsLeft < self.interaction2lightestWeight[a]:
                     usedSlots = self.interaction2slots[a]
-                elif self.interaction2slots[a] - usedSlots > self.interaction2restWeight[a]:
+                elif slotsLeft > self.interaction2restWeight[a]:
                     usedSlots = 0
                 keySet += "-"+ str(usedSlots)
                 newSolution.interactions[a] = usedSlots
