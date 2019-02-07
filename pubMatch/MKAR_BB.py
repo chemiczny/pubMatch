@@ -195,8 +195,8 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         self.interaction2slots = {}
         self.interaction2restWeight = {}
         self.interaction2lightestWeight = {}
+        self.interaction2boundaries = {}
         
-        print("kalkulacje")
         for author in interactions:
             w = []
             self.interaction2slots[author] = self.authorsDict[author].slots
@@ -212,12 +212,21 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                 w.append(newSize)
                 if newSize < lightestWeight:
                     lightestWeight = newSize
-                    
-            print(w)
+               
+            oldLen = len(w)
+            w = sorted(list(set(w)))
+            if len(w) == 1 and oldLen > 1:
+                itemSize = w[0]
+                for i in range(oldLen):
+                    newBoundary = (i+1)*itemSize 
+                    if newBoundary < self.interaction2slots[author]:
+                        w.append( newBoundary )
+            
+            
             self.interaction2restWeight[author] = restWeight
             self.interaction2lightestWeight[author] = lightestWeight
+            self.interaction2boundaries[author] = w
             
-        print("po kalkulacjach")
     
     def findBoundaryForSolution(self, solution, maxPointsOfRest):
         index = int((self.maxWeight - solution.actualWeight)/100.)+1
@@ -340,10 +349,17 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                 usedSlots = newSolution.authors2usedSlots[a]
                 slotsLeft = self.interaction2slots[a] - usedSlots
                 
-                if slotsLeft < self.interaction2lightestWeight[a]:
-                    usedSlots = self.interaction2slots[a]
-                elif slotsLeft > self.interaction2restWeight[a]:
-                    usedSlots = 0
+#                if slotsLeft < self.interaction2lightestWeight[a]:
+#                    usedSlots = self.interaction2slots[a]
+                lastBoundary = 0
+                for boundary in self.interaction2boundaries[a]:
+                    if slotsLeft < boundary:
+                        usedSlots = lastBoundary
+                        break
+                    lastBoundary = boundary
+                else:
+                    if slotsLeft > self.interaction2restWeight[a]:
+                        usedSlots = 0
                 keySet += "-"+ str(usedSlots)
                 newSolution.interactions[a] = usedSlots
     #            weights[a] = usedSlots
