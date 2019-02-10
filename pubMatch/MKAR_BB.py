@@ -48,7 +48,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                         publicationsForBB.append(p)
                         coauthors = list(c.neighbors(p))
                         authorsSum |= set(coauthors)
-                        
+#                        interactingAuthors.append(list(authorsSum))
                         pubsSet = set(publicationsForBB)
                         a2remove = []
                         for coa in authorsSum:
@@ -62,7 +62,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
             
 #        print(len(publicationsForBB))
         for pInd in range(len(publicationsForBB)):
-            pubs = publicationsForBB[pInd:]
+            pubs = publicationsForBB[pInd+1:]
             
             lightestWeight = 100
             
@@ -194,7 +194,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
     def calculateInteractionProperties(self, interactions, restOfPublications):
         self.interaction2slots = {}
         self.interaction2restWeight = {}
-        self.interaction2lightestWeight = {}
+#        self.interaction2lightestWeight = {}
         self.interaction2boundaries = {}
         
         for author in interactions:
@@ -214,17 +214,20 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                     lightestWeight = newSize
                
             oldLen = len(w)
-            w = sorted(list(set(w)))
+            
             if len(w) == 1 and oldLen > 1:
                 itemSize = w[0]
+                w = []
                 for i in range(oldLen):
                     newBoundary = (i+1)*itemSize 
                     if newBoundary < self.interaction2slots[author]:
                         w.append( newBoundary )
+#            else:
+#                w = [ lightestWeight ]
             
             
             self.interaction2restWeight[author] = restWeight
-            self.interaction2lightestWeight[author] = lightestWeight
+#            self.interaction2lightestWeight[author] = lightestWeight
             self.interaction2boundaries[author] = w
             
     
@@ -353,10 +356,11 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
 #                    usedSlots = self.interaction2slots[a]
                 lastBoundary = 0
                 for boundary in self.interaction2boundaries[a]:
+                    
                     if slotsLeft < boundary:
-                        usedSlots = lastBoundary
+                        usedSlots = self.interaction2slots[a] -lastBoundary
                         break
-                    lastBoundary = boundary
+                    lastBoundary =  boundary
                 else:
                     if slotsLeft > self.interaction2restWeight[a]:
                         usedSlots = 0
