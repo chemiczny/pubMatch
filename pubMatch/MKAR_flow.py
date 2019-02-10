@@ -32,14 +32,16 @@ class MKAR_FlowTheory(MKAR):
     
     def maxPointsForBB(self, publications, maxW):
         result = []
+        maxFlows = []
         
         for i in range(len(publications)):
             subResult = []
-            publicationSubset =  publications[i:]
+            publicationSubset =  publications[i+1:]
             maxFlow = self.getMaxFlow(publicationSubset)
             if maxFlow < maxW:
                 maxW = maxFlow
                 
+            maxFlows.append(int(100*maxW))
             for i in range(int(maxW)+1):
                 subResult.append(self.solveFlowProblem(publicationSubset, float(i) ))
                 
@@ -47,7 +49,7 @@ class MKAR_FlowTheory(MKAR):
             
             result.append(subResult)
             
-        return result
+        return result, maxFlows
         
     def buildFlowGraph(self, publications):
         flowG = nx.DiGraph()

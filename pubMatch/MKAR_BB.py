@@ -133,8 +133,9 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
 
         publications, interactingAuthors, lightestWeights = self.prepareForBB(p1, p2, p3)
             
-        self.maxPoints = self.maxPointsForBB(publications, maxWeight)
+        self.maxPoints, self.maxFlows = self.maxPointsForBB(publications, maxWeight)
         print("Maksymalne punkty z teori przeplywu - obliczone")
+        print("max flows: ", self.maxFlows)
         
         self.maxWeight = int(round(maxWeight*100))
         
@@ -214,7 +215,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                     lightestWeight = newSize
                
             oldLen = len(w)
-            
+            #THIS IS HEURESTIC!!!!
             if len(w) == 1 and oldLen > 1:
                 itemSize = w[0]
                 w = []
@@ -245,6 +246,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         timeStart = time()
         authors = list(self.pubGraph.neighbors(publication))
         maxPointsOfRest = self.maxPoints[n]
+        maxFlowOfRest = self.maxFlows[n]
         
         for solution in self.queue:
             if solution.boundary < self.bestPoints:
@@ -276,7 +278,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                     self.toCheapBranches += 1
                     continue
                 
-                keySet, newSolution = self.createSolutionKey(newSolution, interactions)
+                keySet, newSolution = self.createSolutionKey(newSolution, interactions, maxFlowOfRest)
                 
                 if not checkSolution(solutionClasses, newSolution, interactions):
                     self.isomorphicSolutions+=1
@@ -306,7 +308,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                     self.heavySolutionsNo += 1
                     continue
                 
-            keySet, solution = self.createSolutionKey(solution, interactions)
+            keySet, solution = self.createSolutionKey(solution, interactions, maxFlowOfRest)
                 
             if not checkSolution(solutionClasses, solution, interactions):
                 self.isomorphicSolutions+=1
@@ -343,8 +345,12 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         
         
     
-    def createSolutionKey(self, newSolution, interactions):
-        keySet = str(newSolution.actualWeight)
+    def createSolutionKey(self, newSolution, interactions, maxFlowOfRest):
+        if  self.maxWeight - newSolution.actualWeight >= maxFlowOfRest:
+            keySet = "0"
+        else:
+            keySet = str(newSolution.actualWeight)
+            
         newSolution.interactions = {}
     #    weights = {}
         for a in interactions:
