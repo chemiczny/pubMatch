@@ -94,6 +94,14 @@ class MKAR:
                 
         return a
     
+    def getPublicationsFromGraph(self, g):
+        a = []
+        for node in g.nodes:
+            if self.pubGraph.nodes[node]["type"] == "publication":
+                a.append(node)
+                
+        return a
+    
     def removeIsolatedNodes(self):
         print("################################")
         print("Searching for isolated nodes")

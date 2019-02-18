@@ -223,6 +223,12 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                     newBoundary = (i+1)*itemSize 
                     if newBoundary < self.interaction2slots[author]:
                         w.append( newBoundary )
+            #THIS IS REALLY HEURISTIC
+            elif len(w) > 1:
+                lastIndex = len(w)-1
+                for i in range(lastIndex):
+                    if w[i]+w[lastIndex] < self.interaction2slots[author]:
+                        w.append(w[i]+w[lastIndex])
 #            else:
 #                w = [ lightestWeight ]
             
