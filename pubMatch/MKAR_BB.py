@@ -10,6 +10,7 @@ from MKAR_flow import MKAR_FlowTheory
 from solution import Solution
 from copy import deepcopy
 from time import time
+from publicationSorter import PublicationSorter
 import datetime
 
 class MKAR_BranchAndBound(MKAR_FlowTheory):
@@ -30,34 +31,38 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
         authorsSum = set()
         for c in self.components:
 #            print("##################################################")
-            if authorsByPubSorting:
-                authors = self.getAuthorsFromGraph(c)
-                authors.sort(  key = lambda item: len( list( c.neighbors(item ) ) ) )
-            else:
-                authors = self.sortAuthors(c)
+#            if authorsByPubSorting:
+#                authors = self.getAuthorsFromGraph(c)
+#                authors.sort(  key = lambda item: len( list( c.neighbors(item ) ) ) )
+#            else:
+#                authors = self.sortAuthors(c)
                 
-            for a in authors:
-                pubs = list(c.neighbors(a))
-                pubs.sort( key = lambda item: len(  set( c.neighbors(item )) - authorsSum  ) )
-                
-                if pubByDecrasingAuthors:
-                    pubs.reverse()
+#            for a in authors:
+#                pubs = list(c.neighbors(a))
+#                pubs.sort( key = lambda item: len(  set( c.neighbors(item )) - authorsSum  ) )
+#                
+#                if pubByDecrasingAuthors:
+#                    pubs.reverse()
                     
-                for p in pubs:
-                    if not p in publicationsForBB:
-                        publicationsForBB.append(p)
-                        coauthors = list(c.neighbors(p))
-                        authorsSum |= set(coauthors)
+            pubSorter = PublicationSorter(c, self.getPublicationsFromGraph(c))
+            pubSorter.findPublicationClasses()
+            pubs = pubSorter.sort(10)
+                
+            for p in pubs:
+                if not p in publicationsForBB:
+                    publicationsForBB.append(p)
+                    coauthors = list(c.neighbors(p))
+                    authorsSum |= set(coauthors)
 #                        interactingAuthors.append(list(authorsSum))
-                        pubsSet = set(publicationsForBB)
-                        a2remove = []
-                        for coa in authorsSum:
-                            if set(c.neighbors(coa)).issubset( pubsSet ):
-                                a2remove.append(coa)
-                        for a2r in a2remove:
-                            authorsSum.remove(a2r)
-                            
-                        interactingAuthors.append(list(authorsSum))
+                    pubsSet = set(publicationsForBB)
+                    a2remove = []
+                    for coa in authorsSum:
+                        if set(c.neighbors(coa)).issubset( pubsSet ):
+                            a2remove.append(coa)
+                    for a2r in a2remove:
+                        authorsSum.remove(a2r)
+                        
+                    interactingAuthors.append(list(authorsSum))
                     
             
 #        print(len(publicationsForBB))
