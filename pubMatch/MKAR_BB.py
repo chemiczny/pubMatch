@@ -17,7 +17,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
     def __init__(self,  authorsList, publicationList ):
         MKAR_FlowTheory.__init__(self, authorsList, publicationList)
         
-    def prepareForBB(self, componentsSizeDecreasing = False, authorsByPubSorting = False, pubByDecrasingAuthors = False):
+    def prepareForBB(self, componentsSizeDecreasing = False, maxInteractionsSize = 10 ):
         self.divideGraph()
         self.components.sort( key = lambda item: len(item.nodes()) )
         
@@ -46,7 +46,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                     
             pubSorter = PublicationSorter(c, self.getPublicationsFromGraph(c))
             pubSorter.findPublicationClasses()
-            pubs = pubSorter.sort(10)
+            pubs = pubSorter.sort(maxInteractionsSize)
                 
             for p in pubs:
                 if not p in publicationsForBB:
@@ -80,9 +80,9 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
             lightestPublication.append( lightestWeight )
             
 #        print(lightestPublication)
-#        import matplotlib.pyplot as plt
-#        inter = [ len(row) for row in interactingAuthors ]
-#        plt.plot(inter)
+        import matplotlib.pyplot as plt
+        inter = [ len(row) for row in interactingAuthors ]
+        plt.plot(inter)
 #            
         return publicationsForBB, interactingAuthors, lightestPublication
     

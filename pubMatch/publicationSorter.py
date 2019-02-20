@@ -69,6 +69,11 @@ class Path:
                 promisingNodes.append(node)
                 
         return promisingNodes
+    
+    def getKey(self):
+        strPath = [ str(el) for el in sorted(self.path) ]
+        key = "_".join( strPath )
+        return key
         
 
 class PublicationSorter:
@@ -79,6 +84,7 @@ class PublicationSorter:
         
     def findPublicationClasses(self):
         self.publicationTypes = {}
+        temp = {}
         
         for pub in self.pubs:
             authors = list(self.graph.neighbors(pub))
@@ -86,10 +92,13 @@ class PublicationSorter:
             authors.sort()
             authors = "_".join(authors)
             self.graph.nodes[pub]["itemClass"]= authors
-            if authors in self.publicationTypes:
-                self.publicationTypes[authors].items.append(pub)
+            if authors in temp:
+                temp[authors].items.append(pub)
             else:
-                self.publicationTypes[authors] = ItemsType(authorsSet, pub)
+                temp[authors] = ItemsType(authorsSet, pub)
+                
+        for newId, key in enumerate(temp):
+            self.publicationTypes[newId] = temp[key]
                 
         print("wszystkie publikacje: ", len(self.pubs))
         print("liczba klas publikacji: ", len(self.publicationTypes))
@@ -103,7 +112,7 @@ class PublicationSorter:
         queue = []
         
         for key in sortedKeys:
-            if len(  self.publicationTypes[key].assignmentRestriction ) == minimalRestrictions or True:
+            if len(  self.publicationTypes[key].assignmentRestriction ) == minimalRestrictions:
                 newPath = Path(self.publicationTypes)
                 newPath.addItem(key, self.publicationTypes)
                 queue.append( newPath )
@@ -112,20 +121,28 @@ class PublicationSorter:
             
         print("in queue: ", len(queue))
         while len(queue[0].notAnalysedNodes) > 0:
-            newQueue = []
+            newQueue = {}
             
             for path in queue:
                 promisingNodes = path.findPromisingNodes(self.publicationTypes)
                 for node in promisingNodes:
                     newPath = deepcopy(path)
                     newPath.addItem(node, self.publicationTypes)
-                    if newPath.maxInteractions <= interactionLimit :
-                        newQueue.append(newPath)
+                    if newPath.maxInteractions > interactionLimit :
+                        continue
+                    
+                    newKey = newPath.getKey()
+                    if not newKey in newQueue:
+                        newQueue[newKey] = newPath
+                    elif newPath.maxInteractions < newQueue[newKey].maxInteractions:
+                        newQueue[newKey] = newPath
+                    else:
+                        continue
                         
                     if len(queue) > 20:
                         break
                         
-            queue = newQueue
+            queue = list(newQueue.values())
             print("in queue: ", len(queue))
         
         bestPath = None
