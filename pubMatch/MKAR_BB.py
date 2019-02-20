@@ -47,7 +47,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
             pubSorter = PublicationSorter(c, self.getPublicationsFromGraph(c))
             pubSorter.findPublicationClasses()
             pubs = pubSorter.sort(maxInteractionsSize)
-                
+#            pubs.reverse()
             for p in pubs:
                 if not p in publicationsForBB:
                     publicationsForBB.append(p)
@@ -80,9 +80,9 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
             lightestPublication.append( lightestWeight )
             
 #        print(lightestPublication)
-        import matplotlib.pyplot as plt
-        inter = [ len(row) for row in interactingAuthors ]
-        plt.plot(inter)
+#        import matplotlib.pyplot as plt
+#        inter = [ len(row) for row in interactingAuthors ]
+#        plt.plot(inter)
 #            
         return publicationsForBB, interactingAuthors, lightestPublication
     
@@ -203,11 +203,20 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
 #        self.interaction2lightestWeight = {}
         self.interaction2boundaries = {}
         
+#        authorClasses = {}
         for author in interactions:
             w = []
             self.interaction2slots[author] = self.authorsDict[author].slots
             
             restOfHisPublication = restOfPublications & set(self.pubGraph.neighbors(author))
+#            sortedPubsId = sorted(restOfHisPublication)
+#            sortedPubsId = [ str(p) for p in sortedPubsId ]
+#            newKey = "_".join(sortedPubsId)
+            
+#            if not newKey in authorClasses:
+#                authorClasses[newKey] = [author]
+#            else:
+#                authorClasses[newKey].append(author)
             
             restWeight = 0
             lightestWeight = 100000
@@ -231,9 +240,11 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
             #THIS IS REALLY HEURISTIC
             elif len(w) > 1:
                 lastIndex = len(w)-1
-                for i in range(lastIndex):
-                    if w[i]+w[lastIndex] < self.interaction2slots[author]:
-                        w.append(w[i]+w[lastIndex])
+                for nw in range( w[lastIndex], self.interaction2slots[author], w[0] ):
+                    w.append(nw)
+#                for i in range(lastIndex):
+#                    if w[i]+w[lastIndex] < self.interaction2slots[author]:
+#                        w.append(w[i]+w[lastIndex])
 #            else:
 #                w = [ lightestWeight ]
             
@@ -241,6 +252,10 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
             self.interaction2restWeight[author] = restWeight
 #            self.interaction2lightestWeight[author] = lightestWeight
             self.interaction2boundaries[author] = w
+            
+#        for auth in authorClasses:
+#            if len(authorClasses[auth]) > 1:
+#                print("kurwa, ja pierdole")
             
     
     def findBoundaryForSolution(self, solution, maxPointsOfRest):
@@ -372,15 +387,16 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
 #                if slotsLeft < self.interaction2lightestWeight[a]:
 #                    usedSlots = self.interaction2slots[a]
                 lastBoundary = 0
-                for boundary in self.interaction2boundaries[a]:
-                    
-                    if slotsLeft < boundary:
-                        usedSlots = self.interaction2slots[a] -lastBoundary
-                        break
-                    lastBoundary =  boundary
-                else:
-                    if slotsLeft > self.interaction2restWeight[a]:
+                if slotsLeft > self.interaction2restWeight[a]:
                         usedSlots = 0
+                else:
+                    for boundary in self.interaction2boundaries[a]:
+                        
+                        if slotsLeft < boundary:
+                            usedSlots = self.interaction2slots[a] -lastBoundary
+                            break
+                        lastBoundary =  boundary
+                    
                 keySet += "-"+ str(usedSlots)
                 newSolution.interactions[a] = usedSlots
     #            weights[a] = usedSlots

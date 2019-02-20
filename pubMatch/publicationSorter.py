@@ -139,7 +139,7 @@ class PublicationSorter:
                     else:
                         continue
                         
-                    if len(queue) > 20:
+                    if len(queue) > 80:
                         break
                         
             queue = list(newQueue.values())
