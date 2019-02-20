@@ -131,12 +131,12 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
             
         return coauthors
         
-    def branchAndBound(self, maxWeight, minimalPoints = 0, p1 = False, p2 = False, p3 = False):
+    def branchAndBound(self, maxWeight, minimalPoints = 0, p1 = False, maxInteractions = 10):
         timeStart = time()
         self.minimalPoints = minimalPoints
         minimalPoints = int(round(minimalPoints*100))
 
-        publications, interactingAuthors, lightestWeights = self.prepareForBB(p1, p2, p3)
+        publications, interactingAuthors, lightestWeights = self.prepareForBB(p1, maxInteractions)
             
         self.maxPoints, self.maxFlows = self.maxPointsForBB(publications, maxWeight)
         print("Maksymalne punkty z teori przeplywu - obliczone")
