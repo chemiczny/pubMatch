@@ -433,8 +433,12 @@ def solutionAWorseThanSolutionB( solutionA, solutionB, interactions):
 #    if solutionA.actualWeight < solutionB.actualWeight:
 #        return False
     
+    firstTimeWorse = True
     for key in solutionA.interactions:
         if solutionA.interactions[key] < solutionB.interactions[key]:
+            if firstTimeWorse and solutionB.interactions[key] -solutionA.interactions[key] < 10:
+                firstTimeWorse = False
+                continue
             return False
 
         
