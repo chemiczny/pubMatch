@@ -25,14 +25,14 @@ class Path:
         self.path.append(itemId)
         self.actualInteractions |=  itemDict[itemId].assignmentRestriction
         
-        self.notAnalysedNodes.remove(itemId)
+        if len(itemDict[itemId].items) == 1:
+            self.notAnalysedNodes.remove(itemId)
+            
         restRestrictions = set([])
         for key in self.notAnalysedNodes:
             restRestrictions |= itemDict[key].assignmentRestriction
             
-        toRemove = self.actualInteractions - restRestrictions
-        for interaction in toRemove:
-            self.actualInteractions.remove(interaction)
+        self.actualInteractions &= restRestrictions
             
         interactionLen = len(self.actualInteractions)
         if interactionLen > self.maxInteractions:
@@ -41,18 +41,35 @@ class Path:
         self.interactionSum += interactionLen
         self.interactionsHistory.append(interactionLen)
         
+        if len(itemDict[itemId].items) > 1:
+            self.notAnalysedNodes.remove(itemId)
+            
+            restRestrictions = set([])
+            for key in self.notAnalysedNodes:
+                restRestrictions |= itemDict[key].assignmentRestriction
+            
+
+            self.actualInteractions &= restRestrictions
+                
+            interactionLen = len(self.actualInteractions)
+            if interactionLen > self.maxInteractions:
+                self.maxInteractions = interactionLen
+                
+            self.interactionSum += interactionLen
+            self.interactionsHistory.append(interactionLen)
+        
     def calcInteractionsWithNewNode(self, itemId, itemDict):
         tempInteractions = self.actualInteractions | itemDict[itemId].assignmentRestriction
         
         nodes = deepcopy(self.notAnalysedNodes)
-        nodes.remove(itemId)
+        if len(itemDict[itemId].items) == 1:
+            nodes.remove(itemId)
+            
         restRestrictions = set([])
         for key in nodes:
             restRestrictions |= itemDict[key].assignmentRestriction
             
-        toRemove = tempInteractions - restRestrictions
-        for interaction in toRemove:
-            tempInteractions.remove(interaction)
+        tempInteractions &= restRestrictions
             
         return len(tempInteractions)
     
@@ -120,6 +137,7 @@ class PublicationSorter:
                 break
             
         print("in queue: ", len(queue))
+        
         while len(queue[0].notAnalysedNodes) > 0:
             newQueue = {}
             
@@ -139,7 +157,7 @@ class PublicationSorter:
                     else:
                         continue
                         
-                    if len(queue) > 80:
+                    if len(queue) > 200:
                         break
                         
             queue = list(newQueue.values())
@@ -160,9 +178,14 @@ class PublicationSorter:
                 bestPath = path
                 
         sortedPublications = []
-        
+        print("najnizsze interakcje: ", lowestInteractions)
         for key in bestPath.path:
             sortedPublications += self.publicationTypes[key].items
+            
+        if len(bestPath.interactionsHistory) > 3:
+            import matplotlib.pyplot as plt
+            plt.figure()
+            plt.plot(bestPath.interactionsHistory)
             
         return sortedPublications
             

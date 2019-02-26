@@ -16,9 +16,9 @@ from MKAR_flow import MKAR_FlowTheory
 from plotGraph import plotGraph
 import matplotlib.pyplot as plt
 import networkx as nx
-#workersList = readAuthors("../data/adamczykGroup.xls")
-workersList = readAuthors("../data/pracownicy.xls")
-publicationsList = readPublications("../data/publikacje.xls", workersList)
+workersList = readAuthors("../data/adamczykGroup.xls")
+#workersList = readAuthors("../data/pracownicy.xls")
+publicationsList = readPublications("../data/publikacje_update.xls", workersList)
 
 mkar = MKAR_DynamicProgramming(workersList, publicationsList)
 mkar_flow = MKAR_FlowTheory([], [])
@@ -37,12 +37,12 @@ mkar_flow.copyFromMKAR(mkar)
 print(mkar_flow.solveFlowProblem())
 
 test = mkar.useSimpleKnapsackSolution()
-#plt.figure()
-#layout = nx.spring_layout(test)
-#nx.draw_networkx(test, layout)
-
-publicationsIds = mkar_flow.getAllPublicationsFromMainGraph()
-data = mkar_flow.maxPointsOfRestFromFlowTheory(publicationsIds, 230)
-
 plt.figure()
-plt.plot(data)
+layout = nx.spring_layout(test)
+nx.draw_networkx(test, layout)
+
+#publicationsIds = mkar_flow.getAllPublicationsFromMainGraph()
+#data = mkar_flow.maxPointsOfRestFromFlowTheory(publicationsIds, 230)
+#
+#plt.figure()
+#plt.plot(data)

@@ -82,6 +82,7 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
 #        print(lightestPublication)
 #        import matplotlib.pyplot as plt
 #        inter = [ len(row) for row in interactingAuthors ]
+#        plt.figure()
 #        plt.plot(inter)
 #            
         return publicationsForBB, interactingAuthors, lightestPublication
@@ -184,6 +185,8 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                 lowestPoints = solution.actualPoints
                 
         self.saveSolution("solution.csv", bestSolution)
+        self.saveAuthorsStatus("authorsStatus.csv", bestSolution)
+        self.saveUnusedPublications("unusedPublications.csv", bestSolution)
         
         processingTime = time() - timeStart
         prettyTimeTaken = str(datetime.timedelta(seconds = processingTime))
@@ -238,10 +241,10 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                     if newBoundary < self.interaction2slots[author]:
                         w.append( newBoundary )
             #THIS IS REALLY HEURISTIC
-            elif len(w) > 1:
-                lastIndex = len(w)-1
-                for nw in range( w[lastIndex], self.interaction2slots[author], w[0] ):
-                    w.append(nw)
+#            elif len(w) > 1:
+#                lastIndex = len(w)-1
+#                for nw in range( w[lastIndex], self.interaction2slots[author], w[0] ):
+#                    w.append(nw)
 #                for i in range(lastIndex):
 #                    if w[i]+w[lastIndex] < self.interaction2slots[author]:
 #                        w.append(w[i]+w[lastIndex])
@@ -433,12 +436,8 @@ def solutionAWorseThanSolutionB( solutionA, solutionB, interactions):
 #    if solutionA.actualWeight < solutionB.actualWeight:
 #        return False
     
-    firstTimeWorse = True
     for key in solutionA.interactions:
         if solutionA.interactions[key] < solutionB.interactions[key]:
-            if firstTimeWorse and solutionB.interactions[key] -solutionA.interactions[key] < 10:
-                firstTimeWorse = False
-                continue
             return False
 
         

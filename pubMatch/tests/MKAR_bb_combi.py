@@ -14,10 +14,10 @@ from IOtemp import readAuthors, readPublications
 from MKAR_dynamic import MKAR_DynamicProgramming
 from MKAR_BB import MKAR_BranchAndBound
 #import matplotlib.pyplot as plt
-
+#
 workersList = readAuthors("../data/adamczykGroup.xls")
 #workersList = readAuthors("../data/pracownicy.xls")
-publicationsList = readPublications("../data/publikacje.xls", workersList)
+publicationsList = readPublications("../data/publikacje_update.xls", workersList)
 
 mkar = MKAR_DynamicProgramming(workersList, publicationsList)
 mkar_flow = MKAR_BranchAndBound([], [])
@@ -31,5 +31,5 @@ while mkar.printStatus():
     mkar.useSimpleKnapsackSolution()
     
 mkar_flow.copyFromMKAR(mkar)
-#mkar_flow.prepareForBB(True, True)
-mkar_flow.branchAndBound(33, 1100)
+#mkar_flow.prepareForBB(False, 9)
+mkar_flow.branchAndBound(33, 1740, False, 3)

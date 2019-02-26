@@ -15,11 +15,13 @@ def readPublications(excelFile, authors):
     publicationsList = []
     notFoundAuthors = set()
     publicationsNotSet = []
+    
+    individualId = 0
     for i in publicationsSheet.index:
         title = publicationsSheet["Tytuł artykułu"][i]
         year = publicationsSheet["Data publikacji"][i]
-        size = publicationsSheet["UDZIAŁ"][i]
-        points = publicationsSheet["PUNKTACJA"][i]
+        size = publicationsSheet["Wielkość udziału"][i]
+        points = publicationsSheet["Wartość udziału"][i]
         
         names = publicationsSheet["Autorzy"][i].upper()
         names = names.split(",")
@@ -46,7 +48,10 @@ def readPublications(excelFile, authors):
                 notFoundAuthors.add(name)
                 
         if authorsList:
-            publicationsList.append(  Publication(authorsList, int(round(points*100)), int(round(size*100)), title, year, i) )
+#            publicationsList.append(  Publication(authorsList, int(round(points*100)), int(round(size*100)), title, year, i) )
+            for a in authorsList:
+                publicationsList.append(  Publication([a], int(round(points*100)), int(round(size*100)), title, year, individualId, i) )
+                individualId += 1
         else:
             publicationsNotSet.append( [ names, title, year ])
                 

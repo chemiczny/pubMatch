@@ -17,17 +17,17 @@ def checkN(workersList):
         N += w.time
         
     return ceil(N/4.)*3
-
+#
 #workersList = readAuthors("data/pracownicy.xls")
 workersList = readAuthors("data/adamczykGroup.xls")
-publicationsList = readPublications("data/publikacje.xls", workersList)
+publicationsList = readPublications("data/publikacje_update.xls", workersList)
 postFix = "All"
 
 N = checkN(workersList)
 pm = MKAR_FlowTheory(workersList, publicationsList)
 pm.preprocessing()
 publicationsIds = pm.getAllPublicationsFromMainGraph()
-data = pm.solveFlowProblem(publicationsIds, 33, True)
+data = pm.solveFlowProblem(publicationsIds, N, True)
 
 maxPoinst = data["maxPoints"]
 maxSlots = data["maxSlots"]

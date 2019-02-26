@@ -160,12 +160,40 @@ class MKAR:
         
     def saveSolution(self, csvName, solution):
         csv = open(csvName, 'w')
-        csv.write("title\tpoint\tsize\tauthor\tauthor used slots\t author slots available\n")
+        csv.write("title\tpoint\tsize\tauthor\tauthor used slots\t author slots available\tpubId\n")
         for pub in solution.publication2authors:
             authorName = solution.publication2authors[pub]
-            csv.write(str(self.publicationDict[pub].title)+"\t"+str(self.publicationDict[pub].points)+"\t"+str(self.publicationDict[pub].size)+"\t")
-            csv.write(authorName+"\t"+str(solution.authors2usedSlots[authorName])+"\t"+str(self.authorsDict[authorName].slots)+"\n")
+            csv.write(str(self.publicationDict[pub].title)+"\t"+str(self.publicationDict[pub].points/100)+"\t"+str(self.publicationDict[pub].size/100)+"\t")
+            csv.write(authorName+"\t"+str(solution.authors2usedSlots[authorName]/100)+"\t"+str(self.authorsDict[authorName].slots/100)+"\t"+str(self.publicationDict[pub].uniqueId)+"\n")
         
+        csv.close()
+        
+    def saveUnusedPublications(self, csvName, solution):
+        csv = open(csvName, 'w')
+        csv.write("title\tpoint\tsize\tauthor\tauthor used slots\t author slots available\tpubId\n")
+        unused = set(self.publicationDict.keys()) - set(solution.publication2authors.keys())
+        for pub in unused:
+            authorName = self.publicationDict[pub].authors[0].name
+            csv.write(str(self.publicationDict[pub].title)+"\t"+str(self.publicationDict[pub].points/100)+"\t"+str(self.publicationDict[pub].size/100)+"\t")
+            csv.write(authorName+"\t"+str(solution.authors2usedSlots[authorName]/100)+"\t"+str(self.authorsDict[authorName].slots/100)+"\t"+str(self.publicationDict[pub].uniqueId)+"\n")
+        
+        csv.close()
+        
+    def saveAuthorsStatus(self, csvName, solution):
+        csv = open(csvName, 'w')
+        csv.write("author\tauthor used slots\t author slots available\tslots from all his publications\n")
+        unused = set(self.authorsDict.keys()) - set(solution.authors2usedSlots.keys())
+        for authorName in solution.authors2usedSlots:
+            allSlots = self.countMaxPublicationWeight(self.pubGraph.neighbors(authorName))
+            csv.write(authorName+"\t"+str(solution.authors2usedSlots[authorName]/100)+"\t"+str(self.authorsDict[authorName].slots/100)+"\t"+str(allSlots/100)+"\n")
+        
+        for authorName in unused:
+            if authorName in self.pubGraph.nodes():
+                allSlots = self.countMaxPublicationWeight(self.pubGraph.neighbors(authorName))
+            else:
+                allSlots = 0
+            csv.write(authorName+"\t"+str(0)+"\t"+str(self.authorsDict[authorName].slots/100)+"\t"+str(allSlots/100)+"\n")
+            
         csv.close()
     
     def preprocessing(self):
@@ -240,7 +268,7 @@ class MKAR:
                     interestingPubs = [ self.publicationDict[pubId] for pubId in weight2pubs[weight] ]
                     interestingPubs = sorted( interestingPubs, key=lambda x: x.points)
                     
-                    pointReference = interestingPubs[n+1].points
+                    pointReference = interestingPubs[n].points
 #                    print("najgorsza z najlepszych", pointReference)
                     
                     print([ip.points for ip in interestingPubs])
