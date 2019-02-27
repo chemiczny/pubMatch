@@ -240,6 +240,8 @@ class MKAR_BranchAndBound(MKAR_FlowTheory):
                     newBoundary = (i+1)*itemSize 
                     if newBoundary < self.interaction2slots[author]:
                         w.append( newBoundary )
+            else:
+                w = [ w[0]]
             #THIS IS REALLY HEURISTIC
 #            elif len(w) > 1:
 #                lastIndex = len(w)-1
